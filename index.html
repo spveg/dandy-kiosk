@@ -387,7 +387,13 @@ async function loadData(isRefresh = false) {
         byId[id] = row;
     }
 
-    ALL = Object.values(byId).map(normalize);
+    ALL = Object.values(byId)
+      .filter(row => {
+        const qty     = parseInt(row.listing_stock_quantity) || 0;
+        const preorder = row.listing_pre_order === 'TRUE';
+        return qty > 0 || preorder; // keep preorders even if qty = 0
+      })
+      .map(normalize);
     applyFilters();
     loadEl.classList.add('hidden');
 
@@ -591,10 +597,9 @@ function selectRecord(id) {
 }
 
 // ── AUDIO ──────────────────────────────────────────────────────────────
-function audioUrl(r, track) {
+function audioUrl(r, trackIdx) {
   if (!r.audioBase) return null;
-  const pos = track.position.replace(/[\s/\\]/g, '');
-  return r.audioBase + r.discogs_id + '_' + pos + '.mp3';
+  return r.audioBase + r.discogs_id + '_' + (trackIdx + 1) + '.mp3';
 }
 
 function playTrack(recordId, tIdx) {
@@ -604,7 +609,7 @@ function playTrack(recordId, tIdx) {
   if (!track) return;
   if (S.cur?.id === r.id && S.tIdx === tIdx) { aud.paused ? aud.play() : aud.pause(); return; }
   S.cur = r; S.tIdx = tIdx;
-  aud.src = audioUrl(r, track);
+  aud.src = audioUrl(r, tIdx);
   aud.volume = parseFloat(document.getElementById('vol').value);
   aud.play().catch(() => updateUI(recordId, tIdx, false));
   document.getElementById('p-cov').src = r.cover;
