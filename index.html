@@ -7,26 +7,39 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Space+Mono&family=Epilogue:wght@200;300;400&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg:#0a0907; --surface:#131210; --s2:#1a1916; --border:#2a2824;
-  --gold:#c9a84c; --gdim:#8a6d2e; --cream:#f0ead8; --cdim:#9a917d;
-  --red:#c13b2f; --green:#3d7a4a; --text:#e8e0ce; --tdim:#6b6254;
+:root{
+  --bg:#0a0907;--surface:#131210;--s2:#1a1916;--border:#2a2824;
+  --gold:#c9a84c;--gdim:#8a6d2e;--cream:#f0ead8;--cdim:#9a917d;
+  --red:#c13b2f;--green:#3d7a4a;--text:#e8e0ce;--tdim:#6b6254;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+
+/* ══════════════════════════════════════════
+   LAYOUT — two modes controlled by body class
+   body.mode-list  → sidebar + detail (current)
+   body.mode-grid  → full-width grid
+   ══════════════════════════════════════════ */
 
 body{
-  background:var(--bg);color:var(--text);font-family:'Epilogue',sans-serif;font-weight:300;
-  height:100dvh;overflow:hidden;
+  background:var(--bg);color:var(--text);
+  font-family:'Epilogue',sans-serif;font-weight:300;
   display:grid;
   grid-template-rows:56px 1fr 70px;
   grid-template-columns:300px 1fr;
   grid-template-areas:"hd hd" "sb mn" "pl pl";
+  transition:grid-template-columns .3s ease;
+}
+/* Grid mode: collapse sidebar column */
+body.mode-grid{
+  grid-template-columns:0px 1fr;
 }
 
 /* ── HEADER ── */
 header{
   grid-area:hd;display:flex;align-items:center;justify-content:space-between;
   padding:0 20px;border-bottom:1px solid var(--border);background:var(--surface);gap:10px;
+  z-index:10;
 }
 .logo{display:flex;align-items:baseline;gap:8px;flex-shrink:0}
 .logo-name{font-family:'Playfair Display',serif;font-size:1.35rem;color:var(--gold);letter-spacing:.04em}
@@ -45,8 +58,35 @@ header{
 .ri{display:inline-block}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* view toggle in header */
+.view-toggle{display:flex;gap:3px;flex-shrink:0}
+.vbtn{width:28px;height:26px;background:none;border:1px solid var(--border);border-radius:2px;cursor:pointer;color:var(--tdim);display:flex;align-items:center;justify-content:center;transition:all .15s}
+.vbtn:hover{border-color:var(--gdim);color:var(--cdim)}
+.vbtn.on{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,.07)}
+.vbtn svg{width:12px;height:12px;fill:currentColor}
+
+/* grid search bar in header (only in grid mode) */
+.grid-search-wrap{
+  flex:1;position:relative;display:none;max-width:360px;
+}
+body.mode-grid .grid-search-wrap{display:block}
+body.mode-grid .nav-crumb{display:none!important}
+.grid-search-wrap input{
+  width:100%;background:var(--s2);border:1px solid var(--border);border-radius:3px;
+  padding:7px 10px 7px 28px;color:var(--text);font-family:'Epilogue',sans-serif;
+  font-size:.83rem;outline:none;transition:border-color .2s;
+}
+.grid-search-wrap input:focus{border-color:var(--gdim)}
+.grid-search-wrap input::placeholder{color:var(--tdim)}
+.gsi{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--tdim);font-size:.88rem;pointer-events:none}
+
 /* ── SIDEBAR ── */
-aside{grid-area:sb;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--surface)}
+aside{
+  grid-area:sb;border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;background:var(--surface);
+  transition:opacity .2s;
+}
+body.mode-grid aside{opacity:0;pointer-events:none}
 .search-wrap{position:relative;padding:10px 12px;border-bottom:1px solid var(--border)}
 .search-wrap input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:8px 10px 8px 28px;color:var(--text);font-family:'Epilogue',sans-serif;font-size:.83rem;outline:none;transition:border-color .2s}
 .search-wrap input:focus{border-color:var(--gdim)}
@@ -62,22 +102,14 @@ aside{grid-area:sb;border-right:1px solid var(--border);display:flex;flex-direct
 .ftab{flex-shrink:0;padding:6px 10px;font-family:'Space Mono',monospace;font-size:.54rem;letter-spacing:.09em;text-transform:uppercase;color:var(--tdim);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all .15s;white-space:nowrap}
 .ftab:hover{color:var(--cdim)}
 .ftab.on{color:var(--gold);border-bottom-color:var(--gold)}
-
-/* sidebar toolbar: count + view toggle */
 .sb-toolbar{display:flex;align-items:center;justify-content:space-between;padding:5px 12px;border-bottom:1px solid var(--border)}
 .count{font-family:'Space Mono',monospace;font-size:.52rem;letter-spacing:.1em;color:var(--tdim);text-transform:uppercase}
-.view-toggle{display:flex;gap:3px}
-.vbtn{width:26px;height:22px;background:none;border:1px solid var(--border);border-radius:2px;cursor:pointer;color:var(--tdim);display:flex;align-items:center;justify-content:center;transition:all .15s}
-.vbtn:hover{border-color:var(--gdim);color:var(--cdim)}
-.vbtn.on{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,.07)}
-.vbtn svg{width:11px;height:11px;fill:currentColor}
-
 .list{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
 .list::-webkit-scrollbar{width:3px}
 .list::-webkit-scrollbar-thumb{background:var(--border)}
 
 /* ── LOADING ── */
-.loading-screen{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
+.loading-screen{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
 .loading-screen.hidden{display:none}
 .loading-logo{font-family:'Playfair Display',serif;font-size:2rem;color:var(--gold)}
 .loading-msg{font-family:'Space Mono',monospace;font-size:.6rem;letter-spacing:.2em;color:var(--tdim);text-transform:uppercase}
@@ -88,7 +120,7 @@ aside{grid-area:sb;border-right:1px solid var(--border);display:flex;flex-direct
 .btn-retry{margin-top:10px;background:none;border:1px solid var(--red);color:var(--red);font-family:'Space Mono',monospace;font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;padding:7px 16px;border-radius:2px;cursor:pointer}
 .btn-retry:hover{background:var(--red);color:var(--bg)}
 
-/* ── LIST VIEW tiles ── */
+/* ── LIST TILES ── */
 .tile{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;position:relative}
 .tile:hover{background:var(--s2)}
 .tile.on{background:var(--s2)}
@@ -107,69 +139,134 @@ aside{grid-area:sb;border-right:1px solid var(--border);display:flex;flex-direct
 .lbl-mix{border:1px solid #5a4a2e;color:#9a8260}
 .no-res{padding:28px 12px;text-align:center;font-family:'Space Mono',monospace;font-size:.6rem;color:var(--tdim);letter-spacing:.1em;text-transform:uppercase}
 
-/* ── GRID VIEW ── */
-.grid-view{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:10px;
-  padding:10px;
+/* ── MAIN (list mode) ── */
+main{
+  grid-area:mn;overflow-y:auto;
+  padding:28px 36px;
+  scrollbar-width:thin;scrollbar-color:var(--border) transparent;
+  position:relative;
 }
-.grid-tile{
-  position:relative;cursor:pointer;border-radius:4px;overflow:hidden;
-  background:var(--s2);transition:transform .15s;
-  aspect-ratio:1;
-}
-.grid-tile:hover{transform:scale(1.02)}
-.grid-tile.on{outline:2px solid var(--gold);outline-offset:-2px}
-.grid-tile img{width:100%;height:100%;object-fit:cover;display:block}
-.grid-overlay{
-  position:absolute;inset:0;
-  background:linear-gradient(to top, rgba(0,0,0,.85) 0%, rgba(0,0,0,.2) 50%, transparent 100%);
-  display:flex;flex-direction:column;justify-content:flex-end;
-  padding:8px;opacity:0;transition:opacity .2s;
-}
-.grid-tile:hover .grid-overlay,.grid-tile.on .grid-overlay{opacity:1}
-.grid-artist{font-family:'Space Mono',monospace;font-size:.52rem;color:var(--gold);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.grid-title{font-size:.78rem;color:var(--cream);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
-.grid-price{font-family:'Space Mono',monospace;font-size:.64rem;color:var(--cdim);margin-top:3px}
-/* badge on corner */
-.grid-badge{
-  position:absolute;top:6px;right:6px;
-  font-family:'Space Mono',monospace;font-size:.46rem;letter-spacing:.06em;
-  padding:2px 5px;border-radius:2px;text-transform:uppercase;
-}
-.gb-sh{background:rgba(74,61,46,.85);color:#c4a870}
-.gb-pre{background:rgba(138,109,46,.85);color:#f0d080}
-.gb-new{background:rgba(40,80,40,.85);color:#80c880}
-.gb-mix{background:rgba(80,60,30,.85);color:#c4a060}
-/* audio dot */
-.grid-audio-dot{
-  position:absolute;top:6px;left:6px;
-  width:7px;height:7px;border-radius:50%;background:var(--gold);
-  box-shadow:0 0 6px rgba(201,168,76,.6);
-}
-
-/* ── MAIN ── */
-main{grid-area:mn;overflow-y:auto;padding:28px 36px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
 main::-webkit-scrollbar{width:3px}
 main::-webkit-scrollbar-thumb{background:var(--border)}
 .empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--tdim)}
 .empty .big{font-family:'Playfair Display',serif;font-size:5.5rem;color:var(--border);line-height:1}
 .empty p{font-family:'Space Mono',monospace;font-size:.6rem;letter-spacing:.2em;text-transform:uppercase}
 
-/* ── DETAIL ── */
-.det{display:grid;grid-template-columns:230px 1fr;gap:32px;animation:fu .22s ease}
-@keyframes fu{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
-.cov-col{position:sticky;top:0;align-self:start}
-.det-cover{width:100%;aspect-ratio:1;border-radius:4px;object-fit:cover;box-shadow:0 12px 40px rgba(0,0,0,.65);display:block;background:var(--border)}
-.cov-badges{margin-top:9px;display:flex;gap:4px;flex-wrap:wrap}
-.cbadge{font-family:'Space Mono',monospace;font-size:.52rem;letter-spacing:.09em;text-transform:uppercase;padding:3px 6px;border-radius:2px;border:1px solid var(--border);color:var(--tdim)}
-.cbadge.pre{border-color:var(--gdim);color:var(--gdim)}
-.cbadge.new{border-color:#3a6b3a;color:#5a9b5a}
-.cbadge.sh{border-color:#4a3d2e;color:#8a7250}
-.det-price{margin-top:10px;font-family:'Playfair Display',serif;font-size:1.55rem;color:var(--gold)}
+/* ── GRID VIEW (full area in mode-grid) ── */
+#grid-area{
+  display:none;
+  grid-area:mn;
+  overflow-y:auto;
+  padding:16px 20px;
+  scrollbar-width:thin;scrollbar-color:var(--border) transparent;
+}
+#grid-area::-webkit-scrollbar{width:4px}
+#grid-area::-webkit-scrollbar-thumb{background:var(--border)}
+body.mode-grid #grid-area{display:block}
+body.mode-grid main{display:none}
 
-.info{padding-top:2px}
+/* grid filter bar */
+.grid-filterbar{
+  display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center;
+}
+.gftab{
+  padding:5px 11px;font-family:'Space Mono',monospace;font-size:.54rem;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--tdim);background:none;
+  border:1px solid var(--border);border-radius:20px;cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.gftab:hover{color:var(--cdim);border-color:var(--tdim)}
+.gftab.on{color:var(--gold);border-color:var(--gold);background:rgba(201,168,76,.08)}
+.grid-count{font-family:'Space Mono',monospace;font-size:.52rem;color:var(--tdim);letter-spacing:.1em;text-transform:uppercase;margin-left:auto}
+
+/* the grid itself */
+.grid-inner{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+}
+/* on small screens (iPad mini ~768px) → 3 cols */
+@media(max-width:900px){.grid-inner{grid-template-columns:repeat(3,1fr);}}
+
+.gc{
+  position:relative;cursor:pointer;border-radius:5px;overflow:hidden;
+  background:var(--s2);aspect-ratio:1;
+  transition:transform .18s,box-shadow .18s;
+}
+.gc:hover{transform:scale(1.03);box-shadow:0 8px 28px rgba(0,0,0,.55)}
+.gc.on{outline:2px solid var(--gold);outline-offset:-2px}
+.gc img{width:100%;height:100%;object-fit:cover;display:block}
+/* gradient overlay always on */
+.gc-grad{
+  position:absolute;inset:0;
+  background:linear-gradient(to top,rgba(0,0,0,.88) 0%,rgba(0,0,0,.15) 45%,transparent 70%);
+  pointer-events:none;
+}
+.gc-info{
+  position:absolute;bottom:0;left:0;right:0;
+  padding:10px 9px 9px;
+  pointer-events:none;
+}
+.gc-artist{font-family:'Space Mono',monospace;font-size:.54rem;color:var(--gold);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gc-title{font-size:.82rem;color:var(--cream);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;line-height:1.2}
+.gc-price{font-family:'Space Mono',monospace;font-size:.62rem;color:var(--cdim);margin-top:3px}
+/* top badges */
+.gc-badge{
+  position:absolute;top:7px;right:7px;
+  font-family:'Space Mono',monospace;font-size:.46rem;letter-spacing:.06em;
+  padding:2px 6px;border-radius:12px;text-transform:uppercase;
+  backdrop-filter:blur(4px);
+}
+.gb-sh{background:rgba(60,44,20,.82);color:#c4a870;border:1px solid rgba(138,109,46,.4)}
+.gb-pre{background:rgba(100,75,15,.82);color:#f0d070;border:1px solid rgba(201,168,76,.4)}
+.gb-new{background:rgba(20,55,20,.82);color:#80c880;border:1px solid rgba(61,122,74,.4)}
+.gb-mix{background:rgba(70,50,20,.82);color:#c4a060;border:1px solid rgba(138,100,46,.4)}
+.gc-audio{
+  position:absolute;top:8px;left:8px;
+  width:8px;height:8px;border-radius:50%;background:var(--gold);
+  box-shadow:0 0 8px rgba(201,168,76,.7);
+}
+
+/* ── DETAIL MODAL (used in grid mode) ── */
+#modal-overlay{
+  display:none;position:fixed;inset:0;z-index:50;
+  background:rgba(0,0,0,.65);backdrop-filter:blur(3px);
+  align-items:center;justify-content:center;padding:20px;
+}
+#modal-overlay.open{display:flex;animation:fadein .2s ease}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+#modal-box{
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  width:100%;max-width:780px;max-height:88vh;
+  display:flex;flex-direction:column;overflow:hidden;
+  animation:slideup .22s ease;
+  box-shadow:0 24px 64px rgba(0,0,0,.7);
+}
+@keyframes slideup{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.modal-hdr-info{min-width:0}
+.modal-artist{font-family:'Space Mono',monospace;font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+.modal-title{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.modal-close{
+  width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:none;
+  color:var(--tdim);font-size:1rem;cursor:pointer;flex-shrink:0;transition:all .15s;
+  display:flex;align-items:center;justify-content:center;
+}
+.modal-close:hover{border-color:var(--cream);color:var(--cream)}
+.modal-body{
+  display:grid;grid-template-columns:200px 1fr;
+  overflow:hidden;flex:1;
+}
+.modal-cover-col{padding:20px 16px 20px 20px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:10px;flex-shrink:0}
+.modal-cover{width:100%;aspect-ratio:1;border-radius:4px;object-fit:cover;display:block;background:var(--border);box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.modal-cover-badges{display:flex;gap:4px;flex-wrap:wrap}
+.modal-scroll{overflow-y:auto;padding:20px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.modal-scroll::-webkit-scrollbar{width:3px}
+.modal-scroll::-webkit-scrollbar-thumb{background:var(--border)}
+
+/* ── DETAIL (shared between list mode inline & modal) ── */
 .d-art{font-family:'Space Mono',monospace;font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:5px}
 .d-tit{font-family:'Playfair Display',serif;font-size:1.9rem;line-height:1.15;color:var(--cream);margin-bottom:12px}
 .d-specs{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)}
@@ -184,27 +281,23 @@ main::-webkit-scrollbar-thumb{background:var(--border)}
 .d-desc{font-size:.84rem;line-height:1.7;color:var(--cdim);margin-bottom:22px}
 .d-desc h3{font-family:'Playfair Display',serif;font-size:.95rem;font-weight:400;color:var(--cream);margin:12px 0 4px}
 
-/* ── STOCK / EXEMPLAIRES ── */
-.stock-section{margin-bottom:22px}
-.stock-hdr{font-family:'Space Mono',monospace;font-size:.54rem;letter-spacing:.2em;text-transform:uppercase;color:var(--tdim);margin-bottom:10px}
-/* neuf: single box */
-.stock-new{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--s2);border:1px solid var(--border);border-radius:4px;gap:12px}
-.sn-left{display:flex;align-items:center;gap:10px}
+/* stock */
+.stock-section{margin-bottom:20px}
+.stock-hdr{font-family:'Space Mono',monospace;font-size:.52rem;letter-spacing:.2em;text-transform:uppercase;color:var(--tdim);margin-bottom:9px}
+.stock-new{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--s2);border:1px solid var(--border);border-radius:4px;gap:10px}
 .sn-cond{font-family:'Space Mono',monospace;font-size:.6rem;letter-spacing:.08em;color:var(--green);text-transform:uppercase}
-.sn-qty{font-family:'Space Mono',monospace;font-size:.56rem;color:var(--tdim);letter-spacing:.08em}
-.sn-comment{font-size:.75rem;color:var(--tdim);font-style:italic}
-.sn-price{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--gold);flex-shrink:0}
-/* occasion: one card per listing */
-.stock-sh-list{display:flex;flex-direction:column;gap:8px}
-.sh-card{padding:12px 14px;background:var(--s2);border:1px solid var(--border);border-radius:4px;border-left:3px solid var(--gdim)}
-.sh-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px}
-.sh-cond{font-family:'Space Mono',monospace;font-size:.6rem;letter-spacing:.08em;color:#c4a870;text-transform:uppercase}
-.sh-price{font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--gold);flex-shrink:0}
-.sh-comment{font-size:.78rem;color:var(--cdim);line-height:1.5}
-.sh-meta{font-family:'Space Mono',monospace;font-size:.52rem;color:var(--tdim);margin-top:5px;letter-spacing:.06em}
+.sn-qty{font-family:'Space Mono',monospace;font-size:.54rem;color:var(--tdim);letter-spacing:.07em;margin-top:2px}
+.sn-comment{font-size:.74rem;color:var(--tdim);font-style:italic;margin-top:3px}
+.sn-price{font-family:'Playfair Display',serif;font-size:1.25rem;color:var(--gold);flex-shrink:0}
+.stock-sh-list{display:flex;flex-direction:column;gap:7px}
+.sh-card{padding:11px 13px;background:var(--s2);border:1px solid var(--border);border-radius:4px;border-left:3px solid var(--gdim)}
+.sh-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:5px}
+.sh-cond{font-family:'Space Mono',monospace;font-size:.58rem;letter-spacing:.07em;color:#c4a870;text-transform:uppercase}
+.sh-price{font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--gold);flex-shrink:0}
+.sh-comment{font-size:.77rem;color:var(--cdim);line-height:1.5}
 
-/* ── TRACKLIST ── */
-.tl-hdr{font-family:'Space Mono',monospace;font-size:.52rem;letter-spacing:.2em;text-transform:uppercase;color:var(--tdim);margin-bottom:7px;margin-top:22px}
+/* tracklist */
+.tl-hdr{font-family:'Space Mono',monospace;font-size:.52rem;letter-spacing:.2em;text-transform:uppercase;color:var(--tdim);margin-bottom:7px;margin-top:20px}
 .tracklist{display:flex;flex-direction:column}
 .track{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:3px;transition:background .1s}
 .track.has-audio{cursor:pointer}
@@ -221,8 +314,19 @@ main::-webkit-scrollbar-thumb{background:var(--border)}
 .t-name{flex:1;font-size:.84rem;color:var(--cdim);transition:color .1s}
 .track.has-audio:hover .t-name,.track.playing .t-name{color:var(--cream)}
 
+/* inline detail (list mode) */
+.det{display:grid;grid-template-columns:230px 1fr;gap:32px;animation:fu .22s ease}
+@keyframes fu{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+.cov-col{position:sticky;top:0;align-self:start}
+.det-cover{width:100%;aspect-ratio:1;border-radius:4px;object-fit:cover;box-shadow:0 12px 40px rgba(0,0,0,.65);display:block;background:var(--border)}
+.cov-badges{margin-top:9px;display:flex;gap:4px;flex-wrap:wrap}
+.cbadge{font-family:'Space Mono',monospace;font-size:.52rem;letter-spacing:.09em;text-transform:uppercase;padding:3px 6px;border-radius:2px;border:1px solid var(--border);color:var(--tdim)}
+.cbadge.pre{border-color:var(--gdim);color:var(--gdim)}
+.cbadge.new{border-color:#3a6b3a;color:#5a9b5a}
+.cbadge.sh{border-color:#4a3d2e;color:#8a7250}
+
 /* ── PLAYER ── */
-#pbar{grid-area:pl;border-top:1px solid var(--border);background:var(--surface);padding:0 20px;display:flex;align-items:center;gap:14px;opacity:0;pointer-events:none;transition:opacity .3s}
+#pbar{grid-area:pl;border-top:1px solid var(--border);background:var(--surface);padding:0 20px;display:flex;align-items:center;gap:14px;opacity:0;pointer-events:none;transition:opacity .3s;z-index:10}
 #pbar.on{opacity:1;pointer-events:all}
 .p-cov{width:38px;height:38px;border-radius:2px;object-fit:cover;flex-shrink:0;background:var(--border)}
 .p-inf{flex:1;min-width:0}
@@ -248,12 +352,33 @@ input[type=range]{-webkit-appearance:none;appearance:none;width:64px;height:3px;
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:var(--gold);cursor:pointer}
 </style>
 </head>
-<body>
+<body class="mode-list">
 
+<!-- Loading -->
 <div class="loading-screen" id="loading">
   <div class="loading-logo">DandyRecords</div>
   <div class="loading-bar"><div class="loading-fill"></div></div>
   <div class="loading-msg" id="loading-msg">Chargement du catalogue…</div>
+</div>
+
+<!-- Detail modal (grid mode) -->
+<div id="modal-overlay" onclick="closeModal(event)">
+  <div id="modal-box">
+    <div class="modal-hdr">
+      <div class="modal-hdr-info">
+        <div class="modal-artist" id="modal-artist">—</div>
+        <div class="modal-title" id="modal-title">—</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-cover-col">
+        <img class="modal-cover" id="modal-cover" src="" alt="">
+        <div class="modal-cover-badges" id="modal-badges"></div>
+      </div>
+      <div class="modal-scroll" id="modal-content"></div>
+    </div>
+  </div>
 </div>
 
 <header>
@@ -261,19 +386,34 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;heigh
     <span class="logo-name">DandyRecords</span>
     <span class="logo-sub">Paris</span>
   </div>
+  <!-- list mode breadcrumb -->
   <div class="nav-crumb" id="nav-crumb" style="display:none">
     <span class="crumb-root" onclick="clearNav()">Catalogue</span>
     <span class="crumb-sep">›</span>
     <span class="crumb-item" id="crumb-label">—</span>
   </div>
+  <!-- grid mode search -->
+  <div class="grid-search-wrap">
+    <span class="gsi">⌕</span>
+    <input id="grid-search" type="text" placeholder="Artiste, titre, label, genre…" autocomplete="off">
+  </div>
   <div class="hd-right">
     <div class="badge-event">Paris Loves Vinyl</div>
+    <div class="view-toggle">
+      <button class="vbtn on" id="vbtn-list" onclick="setView('list')" title="Vue liste">
+        <svg viewBox="0 0 12 12"><rect x="0" y="1" width="12" height="2"/><rect x="0" y="5" width="12" height="2"/><rect x="0" y="9" width="12" height="2"/></svg>
+      </button>
+      <button class="vbtn" id="vbtn-grid" onclick="setView('grid')" title="Vue grille">
+        <svg viewBox="0 0 12 12"><rect x="0" y="0" width="5" height="5"/><rect x="7" y="0" width="5" height="5"/><rect x="0" y="7" width="5" height="5"/><rect x="7" y="7" width="5" height="5"/></svg>
+      </button>
+    </div>
     <button class="btn-refresh" id="btn-refresh" onclick="loadData(true)">
       <span class="ri">↻</span> Refresh
     </button>
   </div>
 </header>
 
+<!-- SIDEBAR (list mode only) -->
 <aside>
   <div class="search-wrap">
     <span class="si">⌕</span>
@@ -296,21 +436,12 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;heigh
     <button class="ftab" data-f="ost">Soundtrack</button>
   </div>
   <div class="sb-toolbar">
-    <div class="count" id="count">—</div>
-    <div class="view-toggle">
-      <!-- list view -->
-      <button class="vbtn on" id="vbtn-list" onclick="setView('list')" title="Vue liste">
-        <svg viewBox="0 0 12 12"><rect x="0" y="1" width="12" height="2"/><rect x="0" y="5" width="12" height="2"/><rect x="0" y="9" width="12" height="2"/></svg>
-      </button>
-      <!-- grid view -->
-      <button class="vbtn" id="vbtn-grid" onclick="setView('grid')" title="Vue grille">
-        <svg viewBox="0 0 12 12"><rect x="0" y="0" width="5" height="5"/><rect x="7" y="0" width="5" height="5"/><rect x="0" y="7" width="5" height="5"/><rect x="7" y="7" width="5" height="5"/></svg>
-      </button>
-    </div>
+    <div class="count" id="count-list">—</div>
   </div>
   <div class="list" id="list"></div>
 </aside>
 
+<!-- MAIN (list mode detail) -->
 <main id="main">
   <div class="empty" id="empty">
     <div class="big">♫</div>
@@ -319,6 +450,25 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;heigh
   <div id="det" style="display:none"></div>
 </main>
 
+<!-- GRID AREA (grid mode full width) -->
+<div id="grid-area">
+  <div class="grid-filterbar" id="grid-filterbar">
+    <button class="gftab on" data-f="all">Tout</button>
+    <button class="gftab" data-f="new">Neuf</button>
+    <button class="gftab" data-f="sh">Occasion</button>
+    <button class="gftab" data-f="pre">Préco</button>
+    <button class="gftab" data-f="jazz">Jazz</button>
+    <button class="gftab" data-f="citypop">City Pop</button>
+    <button class="gftab" data-f="fusion">Fusion</button>
+    <button class="gftab" data-f="soul">Soul/Funk</button>
+    <button class="gftab" data-f="elec">Electronic</button>
+    <button class="gftab" data-f="ost">Soundtrack</button>
+    <span class="grid-count" id="count-grid">—</span>
+  </div>
+  <div class="grid-inner" id="grid-inner"></div>
+</div>
+
+<!-- PLAYER BAR -->
 <div id="pbar">
   <img class="p-cov" id="p-cov" src="" alt="">
   <div class="p-inf">
@@ -346,223 +496,162 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;heigh
 <audio id="aud"></audio>
 
 <script>
-// ── CONFIG ──────────────────────────────────────────────────────────────
-const SHEET_ID = '1adNI1aCJb2-Ym2kYYHg0tol56sGIa78-gImVY7dkKqU';
-const CSV_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&t=`;
+// ── CONFIG ─────────────────────────────────────────────────────────────
+const SHEET_ID='1adNI1aCJb2-Ym2kYYHg0tol56sGIa78-gImVY7dkKqU';
+const CSV_URL=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&t=`;
 
-// ── STATE ───────────────────────────────────────────────────────────────
-// ALL = array of "release groups" — each has a representative record + all listings
-let ALL = [];
-const S = { filtered:[], cur:null, tIdx:null, filter:'all', q:'', nav:null, view:'list' };
-const aud = document.getElementById('aud');
+// ── STATE ──────────────────────────────────────────────────────────────
+let ALL=[];
+const S={filtered:[],cur:null,tIdx:null,filter:'all',q:'',nav:null,view:'list'};
+const aud=document.getElementById('aud');
 
-// ── CSV PARSER ──────────────────────────────────────────────────────────
-function parseCSV(text) {
-  const rows = [];
-  let cur = '', inQ = false;
-  const parseLine = line => {
-    const cells = []; let c = '', q = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') { if (q && line[i+1]==='"'){c+='"';i++;}else q=!q; }
-      else if (ch===',' && !q){cells.push(c);c='';}
+// ── CSV PARSER ─────────────────────────────────────────────────────────
+function parseCSV(text){
+  const rows=[];let cur='',inQ=false;
+  const parseLine=line=>{
+    const cells=[];let c='',q=false;
+    for(let i=0;i<line.length;i++){
+      const ch=line[i];
+      if(ch==='"'){if(q&&line[i+1]==='"'){c+='"';i++;}else q=!q;}
+      else if(ch===','&&!q){cells.push(c);c='';}
       else c+=ch;
     }
-    cells.push(c); return cells;
+    cells.push(c);return cells;
   };
-  for (const ch of text) {
-    if (ch==='"') inQ=!inQ;
-    if (ch==='\n' && !inQ){rows.push(parseLine(cur));cur='';}
+  for(const ch of text){
+    if(ch==='"')inQ=!inQ;
+    if(ch==='\n'&&!inQ){rows.push(parseLine(cur));cur='';}
     else cur+=ch;
   }
-  if (cur.trim()) rows.push(parseLine(cur));
-  if (!rows.length) return [];
-  const headers = rows[0].map(h=>h.trim());
+  if(cur.trim())rows.push(parseLine(cur));
+  if(!rows.length)return[];
+  const headers=rows[0].map(h=>h.trim());
   return rows.slice(1).filter(r=>r.length>1&&r.some(c=>c.trim()))
     .map(row=>Object.fromEntries(headers.map((h,i)=>[h,(row[i]||'').trim()])));
 }
 
-// ── BUILD RELEASE GROUPS ─────────────────────────────────────────────────
-// Group all listings by item_id.
-// For new stock: merge into one entry, sum qty.
-// For secondhand: keep each listing as a separate "copy".
-function buildGroups(rows) {
-  // filter out zero-stock non-preorders first
-  const active = rows.filter(r => {
-    const qty = parseInt(r.listing_stock_quantity)||0;
-    return qty>0 || r.listing_pre_order==='TRUE';
+// ── BUILD RELEASE GROUPS ───────────────────────────────────────────────
+function buildGroups(rows){
+  const active=rows.filter(r=>{
+    const qty=parseInt(r.listing_stock_quantity)||0;
+    return qty>0||r.listing_pre_order==='TRUE';
   });
-
-  const byId = {};
-  for (const row of active) {
-    const id = row.item_id; if(!id) continue;
-    if (!byId[id]) byId[id] = [];
-    byId[id].push(row);
-  }
-
-  return Object.values(byId).map(listings => {
-    // Use first listing as representative for release metadata
-    const rep = listings[0];
-
-    // Parse shared release data
-    const tracks = [];
-    for (const t of (rep.release_tracklist||'').split(';')) {
-      const s=t.trim(); if(!s) continue;
+  const byId={};
+  for(const row of active){const id=row.item_id;if(!id)continue;if(!byId[id])byId[id]=[];byId[id].push(row);}
+  return Object.values(byId).map(listings=>{
+    const rep=listings[0];
+    const tracks=[];
+    for(const t of(rep.release_tracklist||'').split(';')){
+      const s=t.trim();if(!s)continue;
       const parts=s.split(' - ');
-      if(parts.length>=2){
-        const pos=parts[0].trim(), title=parts[1].trim();
-        if(title&&title!=='null'&&pos&&!pos.startsWith('-'))
-          tracks.push({position:pos,title});
-      }
+      if(parts.length>=2){const pos=parts[0].trim(),title=parts[1].trim();
+        if(title&&title!=='null'&&pos&&!pos.startsWith('-'))tracks.push({position:pos,title});}
     }
     const genres=(rep.release_genres||'').split(';').map(g=>g.trim()).filter(Boolean);
     const styles=(rep.release_styles||'').split(';').map(s=>s.trim()).filter(Boolean);
     const tags=[...new Set([...genres,...styles])];
     const label=(rep.release_labels_formatted||'').split(';')[0].replace(/\s*\(.*?\)\s*/g,'').trim();
     let audioBase=(rep.item_asset_link||'').trim();
-    if(audioBase&&!audioBase.endsWith('/')) audioBase+='/';
+    if(audioBase&&!audioBase.endsWith('/'))audioBase+='/';
 
-    // Separate new vs secondhand listings
-    const newListings = listings.filter(l=>l.listing_second_hand!=='TRUE'&&l.listing_pre_order!=='TRUE');
-    const preListings = listings.filter(l=>l.listing_pre_order==='TRUE');
-    const shListings  = listings.filter(l=>l.listing_second_hand==='TRUE');
+    const newL=listings.filter(l=>l.listing_second_hand!=='TRUE'&&l.listing_pre_order!=='TRUE');
+    const preL=listings.filter(l=>l.listing_pre_order==='TRUE');
+    const shL =listings.filter(l=>l.listing_second_hand==='TRUE');
 
-    // New: aggregate qty, use lowest price
-    let newEntry = null;
-    if (newListings.length) {
-      const totalQty = newListings.reduce((s,l)=>s+(parseInt(l.listing_stock_quantity)||0),0);
-      const minPrice = Math.min(...newListings.map(l=>parseFloat(l.listing_price)||999));
-      newEntry = {
-        qty: totalQty,
-        price: minPrice + '€',
-        condition: newListings[0].listing_media_condition,
-        comment: newListings[0].listing_public_comments,
-      };
-    }
-    // Preorder: same aggregation
-    let preEntry = null;
-    if (preListings.length) {
-      const totalQty = preListings.reduce((s,l)=>s+(parseInt(l.listing_stock_quantity)||0),0);
-      const minPrice = Math.min(...preListings.map(l=>parseFloat(l.listing_price)||999));
-      preEntry = {
-        qty: totalQty,
-        price: minPrice + '€',
-        condition: preListings[0].listing_media_condition,
-        comment: preListings[0].listing_public_comments,
-        availableDate: preListings[0].listing_available_date,
-      };
-    }
-    // Secondhand: one entry per listing
-    const shEntries = shListings.map(l=>({
-      qty:     parseInt(l.listing_stock_quantity)||0,
-      price:   l.listing_price ? l.listing_price+'€' : '',
-      condition: l.listing_media_condition,
-      sleeve:  l.listing_sleeve_condition,
-      comment: l.listing_public_comments,
+    const newEntry=newL.length?{
+      qty:newL.reduce((s,l)=>s+(parseInt(l.listing_stock_quantity)||0),0),
+      price:Math.min(...newL.map(l=>parseFloat(l.listing_price)||999))+'€',
+      condition:newL[0].listing_media_condition,
+      comment:newL[0].listing_public_comments,
+    }:null;
+    const preEntry=preL.length?{
+      qty:preL.reduce((s,l)=>s+(parseInt(l.listing_stock_quantity)||0),0),
+      price:Math.min(...preL.map(l=>parseFloat(l.listing_price)||999))+'€',
+      condition:preL[0].listing_media_condition,
+      comment:preL[0].listing_public_comments,
+      availableDate:preL[0].listing_available_date,
+    }:null;
+    const shEntries=shL.map(l=>({
+      qty:parseInt(l.listing_stock_quantity)||0,
+      price:l.listing_price?l.listing_price+'€':'',
+      condition:l.listing_media_condition,
+      sleeve:l.listing_sleeve_condition,
+      comment:l.listing_public_comments,
     })).filter(e=>e.qty>0);
 
-    // Display price: lowest across all
-    const allPrices = [...(newEntry?[parseFloat(newEntry.price)]:[]),
-                       ...(preEntry?[parseFloat(preEntry.price)]:[]),
-                       ...shEntries.map(e=>parseFloat(e.price)||999)];
-    const displayPrice = allPrices.length ? Math.min(...allPrices)+'€' : '';
+    const allP=[...(newEntry?[parseFloat(newEntry.price)]:[]),(preEntry?[parseFloat(preEntry.price)]:[]),...shEntries.map(e=>parseFloat(e.price)||999)].flat();
+    const displayPrice=allP.length?Math.min(...allP)+'€':'';
+    const hasNew=!!newEntry,hasPre=!!preEntry,hasSh=shEntries.length>0;
 
-    // Status flags
-    const hasNew  = !!newEntry;
-    const hasPre  = !!preEntry;
-    const hasSh   = shEntries.length>0;
-
-    return {
-      id:         rep.item_id,
-      discogs_id: rep.release_discogs_id,
-      title:      rep.item_title,
-      artist:     (rep.release_artists_formatted||'').trim(),
-      label, tags, genres, styles,
-      catno:      (rep.release_catnos||'').split(';')[0].trim(),
-      year:       rep.release_year,
-      country:    rep.release_country,
-      cover:      rep.item_image_link,
-      formats:    rep.release_formats,
+    return{
+      id:rep.item_id,discogs_id:rep.release_discogs_id,title:rep.item_title,
+      artist:(rep.release_artists_formatted||'').trim(),label,tags,genres,styles,
+      catno:(rep.release_catnos||'').split(';')[0].trim(),year:rep.release_year,
+      country:rep.release_country,cover:rep.item_image_link,formats:rep.release_formats,
       description:(rep.item_long_description||rep.item_short_description||'').trim(),
-      tracks, audioBase,
-      url:        rep.item_eshop_link,
-      // aggregated listings
-      newEntry, preEntry, shEntries,
-      hasNew, hasPre, hasSh,
-      displayPrice,
-      // for filter logic
-      secondHand: hasSh && !hasNew && !hasPre,
-      preorder:   hasPre && !hasNew && !hasSh,
-      isNew:      hasNew && !hasSh,
+      tracks,audioBase,url:rep.item_eshop_link,
+      newEntry,preEntry,shEntries,hasNew,hasPre,hasSh,displayPrice,
+      secondHand:hasSh&&!hasNew&&!hasPre,preorder:hasPre&&!hasNew&&!hasSh,isNew:hasNew&&!hasSh,
     };
   });
 }
 
-// ── LOAD DATA ────────────────────────────────────────────────────────────
-async function loadData(isRefresh=false) {
-  const loadEl=document.getElementById('loading');
-  const msgEl=document.getElementById('loading-msg');
-  const btnRef=document.getElementById('btn-refresh');
+// ── LOAD DATA ──────────────────────────────────────────────────────────
+async function loadData(isRefresh=false){
+  const loadEl=document.getElementById('loading'),msgEl=document.getElementById('loading-msg'),btnRef=document.getElementById('btn-refresh');
   if(isRefresh){btnRef.classList.add('spinning');}
-  else{
-    loadEl.querySelectorAll('.load-err,.btn-retry').forEach(e=>e.remove());
-    msgEl.textContent='Chargement du catalogue…';
-    loadEl.classList.remove('hidden');
-  }
-  try {
+  else{loadEl.querySelectorAll('.load-err,.btn-retry').forEach(e=>e.remove());msgEl.textContent='Chargement du catalogue…';loadEl.classList.remove('hidden');}
+  try{
     const res=await fetch(CSV_URL+Date.now());
-    if(!res.ok) throw new Error(`Erreur HTTP ${res.status}`);
-    const text=await res.text();
-    const rows=parseCSV(text);
-    ALL=buildGroups(rows);
-    applyFilters();
-    loadEl.classList.add('hidden');
-  } catch(err) {
-    if(isRefresh){console.error('Refresh failed:',err);}
+    if(!res.ok)throw new Error(`Erreur HTTP ${res.status}`);
+    ALL=buildGroups(parseCSV(await res.text()));
+    applyFilters();loadEl.classList.add('hidden');
+  }catch(err){
+    if(isRefresh){console.error(err);}
     else{
       msgEl.textContent='';
-      const d=document.createElement('div'); d.className='load-err';
+      const d=document.createElement('div');d.className='load-err';
       d.innerHTML=`Impossible de charger le catalogue.<br><small style="opacity:.7">${err.message}</small><br><br>Vérifie que le Google Sheets est partagé en accès public.`;
-      const b=document.createElement('button'); b.className='btn-retry';
-      b.textContent='↻ Réessayer'; b.onclick=()=>loadData(false);
-      loadEl.appendChild(d); loadEl.appendChild(b);
+      const b=document.createElement('button');b.className='btn-retry';b.textContent='↻ Réessayer';b.onclick=()=>loadData(false);
+      loadEl.appendChild(d);loadEl.appendChild(b);
     }
-  } finally { btnRef.classList.remove('spinning'); }
+  }finally{btnRef.classList.remove('spinning');}
 }
 
-// ── VIEW TOGGLE ──────────────────────────────────────────────────────────
-function setView(v) {
+// ── VIEW TOGGLE ────────────────────────────────────────────────────────
+function setView(v){
   S.view=v;
+  document.body.className=`mode-${v}`;
   document.getElementById('vbtn-list').classList.toggle('on',v==='list');
   document.getElementById('vbtn-grid').classList.toggle('on',v==='grid');
-  renderList();
+  applyFilters();
 }
 
-// ── NAVIGATION ───────────────────────────────────────────────────────────
-function navTo(type,value) {
-  S.nav={type,value}; S.q='';
+// ── NAVIGATION ─────────────────────────────────────────────────────────
+function navTo(type,value){
+  S.nav={type,value};S.q='';
   document.getElementById('search').value='';
+  document.getElementById('grid-search').value='';
   const TL={artist:'Artiste',label:'Label',year:'Année',country:'Pays',genre:'Genre'};
   document.getElementById('af-label').textContent=`${TL[type]||type} : ${value}`;
   document.getElementById('afbar').classList.add('show');
   document.getElementById('nav-crumb').style.display='flex';
   document.getElementById('crumb-label').textContent=value;
+  // switch to list view for navigation
+  setView('list');
   applyFilters();
   document.getElementById('list').scrollTo({top:0,behavior:'smooth'});
 }
-function clearNav() {
+function clearNav(){
   S.nav=null;
   document.getElementById('afbar').classList.remove('show');
   document.getElementById('nav-crumb').style.display='none';
   applyFilters();
 }
 
-// ── FILTERS ──────────────────────────────────────────────────────────────
+// ── FILTERS ────────────────────────────────────────────────────────────
 const GF={
-  all:()=>true,
-  new:r=>r.isNew||r.hasNew,
-  sh:r=>r.hasSh,
-  pre:r=>r.hasPre||r.preorder,
+  all:()=>true,new:r=>r.isNew||r.hasNew,sh:r=>r.hasSh,pre:r=>r.hasPre||r.preorder,
   jazz:r=>r.genres.includes('Jazz')||r.styles.some(s=>/jazz/i.test(s)),
   citypop:r=>r.styles.includes('City Pop')||r.styles.includes('Kayōkyoku'),
   fusion:r=>r.styles.includes('Fusion'),
@@ -570,284 +659,198 @@ const GF={
   elec:r=>r.genres.includes('Electronic')||r.styles.some(s=>/synth|boogie|electro/i.test(s)),
   ost:r=>r.genres.includes('Stage & Screen')||r.styles.includes('Soundtrack')||r.styles.includes('Anison'),
 };
-function matchNav(r) {
-  if(!S.nav) return true;
-  const v=S.nav.value;
-  switch(S.nav.type){
-    case 'artist': return r.artist===v;
-    case 'label':  return r.label===v;
-    case 'year':   return r.year===v;
-    case 'country':return r.country===v;
-    case 'genre':  return r.tags.includes(v);
-    default:       return true;
-  }
+function matchNav(r){
+  if(!S.nav)return true;const v=S.nav.value;
+  switch(S.nav.type){case'artist':return r.artist===v;case'label':return r.label===v;case'year':return r.year===v;case'country':return r.country===v;case'genre':return r.tags.includes(v);default:return true;}
 }
-function applyFilters() {
+function applyFilters(){
   const q=S.q.toLowerCase();
   S.filtered=ALL.filter(r=>{
-    const mq=!q||r.title.toLowerCase().includes(q)||r.artist.toLowerCase().includes(q)
-      ||r.label.toLowerCase().includes(q)||r.catno.toLowerCase().includes(q)
-      ||r.tags.some(t=>t.toLowerCase().includes(q));
+    const mq=!q||r.title.toLowerCase().includes(q)||r.artist.toLowerCase().includes(q)||r.label.toLowerCase().includes(q)||r.catno.toLowerCase().includes(q)||r.tags.some(t=>t.toLowerCase().includes(q));
     return mq&&GF[S.filter](r)&&matchNav(r);
   });
-  renderList();
-}
-
-// ── STATUS BADGE helpers ─────────────────────────────────────────────────
-function statusBadge(r) {
-  if (r.hasNew && r.hasSh)   return {cls:'lbl-mix', txt:'Neuf + Occ.'};
-  if (r.hasPre && r.hasSh)   return {cls:'lbl-mix', txt:'Préco + Occ.'};
-  if (r.hasPre)              return {cls:'lbl-pre', txt:'Préco'};
-  if (r.hasSh && !r.hasNew)  return {cls:'lbl-sh',  txt:'Occasion'};
-  return                            {cls:'lbl-new', txt:'Neuf'};
-}
-function gridBadgeCls(r) {
-  if (r.hasNew && r.hasSh)  return 'gb-mix';
-  if (r.hasPre)             return 'gb-pre';
-  if (r.hasSh && !r.hasNew) return 'gb-sh';
-  return 'gb-new';
-}
-function gridBadgeTxt(r) {
-  if (r.hasNew && r.hasSh)  return 'Neuf + Occ.';
-  if (r.hasPre)             return 'Préco';
-  if (r.hasSh && !r.hasNew) return 'Occasion';
-  return 'Neuf';
-}
-
-// ── RENDER LIST ──────────────────────────────────────────────────────────
-function renderList() {
-  const el=document.getElementById('list');
   const n=S.filtered.length;
-  document.getElementById('count').textContent=n+' disque'+(n!==1?'s':'');
-  if(!n){el.innerHTML='<div class="no-res">Aucun résultat</div>';return;}
-
-  if(S.view==='grid') {
-    const items=S.filtered.map(r=>{
-      const act=S.cur?.id===r.id?' on':'';
-      const b=gridBadgeTxt(r); const bc=gridBadgeCls(r);
-      const audioDot=r.audioBase?'<div class="grid-audio-dot"></div>':'';
-      return `<div class="grid-tile${act}" data-id="${r.id}" onclick="selectRecord('${r.id}')">
-        <img src="${r.cover}" alt="${r.title}" loading="lazy" onerror="this.style.opacity=0">
-        ${audioDot}
-        <span class="grid-badge ${bc}">${b}</span>
-        <div class="grid-overlay">
-          <div class="grid-artist">${r.artist}</div>
-          <div class="grid-title">${r.title}</div>
-          ${r.displayPrice?`<div class="grid-price">${r.displayPrice}</div>`:''}
-        </div>
-      </div>`;
-    }).join('');
-    el.innerHTML=`<div class="grid-view">${items}</div>`;
-  } else {
-    el.innerHTML=S.filtered.map(r=>{
-      const {cls,txt}=statusBadge(r);
-      const act=S.cur?.id===r.id?' on':'';
-      const meta=[r.label,r.catno,r.year].filter(Boolean).join(' · ');
-      return `<div class="tile${act}" data-id="${r.id}" onclick="selectRecord('${r.id}')">
-        <img class="tile-img" src="${r.cover}" alt="" loading="lazy" onerror="this.style.opacity=0">
-        <div class="ti">
-          <div class="ti-art">${r.artist}</div>
-          <div class="ti-tit">${r.title}</div>
-          <div class="ti-meta">${meta}</div>
-        </div>
-        <div class="ti-r">
-          ${r.displayPrice?`<span class="ti-price">${r.displayPrice}</span>`:''}
-          <span class="lbl ${cls}">${txt}</span>
-        </div>
-      </div>`;
-    }).join('');
-  }
+  document.getElementById('count-list').textContent=n+' disque'+(n!==1?'s':'');
+  document.getElementById('count-grid').textContent=n+' disque'+(n!==1?'s':'');
+  if(S.view==='list')renderList();else renderGrid();
 }
 
-// ── SELECT RECORD ────────────────────────────────────────────────────────
-function selectRecord(id) {
-  const r=ALL.find(x=>x.id===id); if(!r) return;
-  S.cur=r; S.tIdx=null;
-  document.querySelectorAll('.tile,.grid-tile').forEach(el=>el.classList.toggle('on',el.dataset.id===id));
-  document.getElementById('empty').style.display='none';
-  const det=document.getElementById('det'); det.style.display='block';
+// ── BADGE HELPERS ──────────────────────────────────────────────────────
+function statusBadge(r){
+  if(r.hasNew&&r.hasSh)return{cls:'lbl-mix',txt:'Neuf + Occ.'};
+  if(r.hasPre&&r.hasSh)return{cls:'lbl-mix',txt:'Préco + Occ.'};
+  if(r.hasPre)return{cls:'lbl-pre',txt:'Préco'};
+  if(r.hasSh&&!r.hasNew)return{cls:'lbl-sh',txt:'Occasion'};
+  return{cls:'lbl-new',txt:'Neuf'};
+}
+function gcBadge(r){
+  if(r.hasNew&&r.hasSh)return['gb-mix','Neuf + Occ.'];
+  if(r.hasPre)return['gb-pre','Préco'];
+  if(r.hasSh&&!r.hasNew)return['gb-sh','Occasion'];
+  return['gb-new','Neuf'];
+}
 
+// ── RENDER LIST ────────────────────────────────────────────────────────
+function renderList(){
+  const el=document.getElementById('list');
+  if(!S.filtered.length){el.innerHTML='<div class="no-res">Aucun résultat</div>';return;}
+  el.innerHTML=S.filtered.map(r=>{
+    const{cls,txt}=statusBadge(r);
+    const act=S.cur?.id===r.id?' on':'';
+    const meta=[r.label,r.catno,r.year].filter(Boolean).join(' · ');
+    return`<div class="tile${act}" data-id="${r.id}" onclick="selectRecord('${r.id}')">
+      <img class="tile-img" src="${r.cover}" alt="" loading="lazy" onerror="this.style.opacity=0">
+      <div class="ti">
+        <div class="ti-art">${r.artist}</div>
+        <div class="ti-tit">${r.title}</div>
+        <div class="ti-meta">${meta}</div>
+      </div>
+      <div class="ti-r">${r.displayPrice?`<span class="ti-price">${r.displayPrice}</span>`:''}<span class="lbl ${cls}">${txt}</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ── RENDER GRID ────────────────────────────────────────────────────────
+function renderGrid(){
+  const el=document.getElementById('grid-inner');
+  if(!S.filtered.length){el.innerHTML='<div class="no-res" style="grid-column:1/-1;padding:40px">Aucun résultat</div>';return;}
+  el.innerHTML=S.filtered.map(r=>{
+    const[bc,bt]=gcBadge(r);
+    const act=S.cur?.id===r.id?' on':'';
+    const audioDot=r.audioBase?'<div class="gc-audio"></div>':'';
+    return`<div class="gc${act}" data-id="${r.id}" onclick="openModal('${r.id}')">
+      <img src="${r.cover}" alt="${r.title}" loading="lazy" onerror="this.style.background='#2a2824'">
+      <div class="gc-grad"></div>
+      ${audioDot}
+      <span class="gc-badge ${bc}">${bt}</span>
+      <div class="gc-info">
+        <div class="gc-artist">${r.artist}</div>
+        <div class="gc-title">${r.title}</div>
+        ${r.displayPrice?`<div class="gc-price">${r.displayPrice}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── DETAIL HTML builder (shared) ──────────────────────────────────────
+function buildDetailHTML(r){
   const esc=v=>v.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   const fmt=r.formats.replace(/\d+x\s*/g,'').replace(/\(.*?\)/g,'').trim();
-
-  const spec=(lbl,val,navType)=>{
-    if(!val) return '';
-    const inner=navType
-      ?`<span class="sp-link" onclick="navTo('${navType}','${esc(val)}');event.stopPropagation()">${val}</span>`
-      :`<span class="sp-v">${val}</span>`;
-    return `<div class="sp"><div class="sp-l">${lbl}</div>${inner}</div>`;
+  const spec=(lbl,val,nt)=>{
+    if(!val)return'';
+    const inner=nt?`<span class="sp-link" onclick="navTo('${nt}','${esc(val)}');closeModal()">${val}</span>`:`<span class="sp-v">${val}</span>`;
+    return`<div class="sp"><div class="sp-l">${lbl}</div>${inner}</div>`;
   };
-
-  const tagsHtml=r.tags.length
-    ?`<div class="d-tags">${r.tags.map(t=>`<span class="tag" onclick="navTo('genre','${esc(t)}');event.stopPropagation()">${t}</span>`).join('')}</div>`
-    :'';
-
-  // ── Stock section ──
+  const tagsHtml=r.tags.length?`<div class="d-tags">${r.tags.map(t=>`<span class="tag" onclick="navTo('genre','${esc(t)}');closeModal()">${t}</span>`).join('')}</div>`:'';
   let stockHtml='<div class="stock-section"><div class="stock-hdr">Disponibilité</div>';
-
-  // Preorder
-  if(r.preEntry) {
-    const pe=r.preEntry;
-    const dateStr=pe.availableDate?` — dispo ${new Date(pe.availableDate).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}`:'';
-    stockHtml+=`<div class="stock-new" style="border-left:3px solid var(--gdim);margin-bottom:8px">
-      <div class="sn-left">
-        <div>
-          <div class="sn-cond" style="color:var(--gdim)">Précommande${dateStr}</div>
-          ${pe.qty?`<div class="sn-qty">${pe.qty} réservé${pe.qty>1?'s':''}</div>`:''}
-          ${pe.comment?`<div class="sn-comment">${pe.comment}</div>`:''}
-        </div>
-      </div>
-      ${pe.price?`<div class="sn-price">${pe.price}</div>`:''}
-    </div>`;
-  }
-
-  // New stock
-  if(r.newEntry) {
-    const ne=r.newEntry;
-    stockHtml+=`<div class="stock-new" style="margin-bottom:${r.shEntries.length?'8px':'0'}">
-      <div class="sn-left">
-        <div>
-          <div class="sn-cond">Neuf — ${ne.condition||'Mint (M)'}</div>
-          ${ne.qty>1?`<div class="sn-qty">${ne.qty} exemplaires en stock</div>`:''}
-          ${ne.comment?`<div class="sn-comment">${ne.comment}</div>`:''}
-        </div>
-      </div>
-      ${ne.price?`<div class="sn-price">${ne.price}</div>`:''}
-    </div>`;
-  }
-
-  // Secondhand listings
-  if(r.shEntries.length) {
-    stockHtml+=`<div class="stock-sh-list">`;
-    r.shEntries.forEach((sh,i)=>{
-      const sleeveStr=sh.sleeve?` / Pochette : ${sh.sleeve}`:'';
-      stockHtml+=`<div class="sh-card">
-        <div class="sh-top">
-          <div class="sh-cond">Occasion — ${sh.condition||'?'}${sleeveStr}</div>
-          ${sh.price?`<div class="sh-price">${sh.price}</div>`:''}
-        </div>
-        ${sh.comment?`<div class="sh-comment">${sh.comment}</div>`:''}
-      </div>`;
-    });
-    stockHtml+=`</div>`;
-  }
-
+  if(r.preEntry){const pe=r.preEntry;const ds=pe.availableDate?` — dispo ${new Date(pe.availableDate).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}`:'';
+    stockHtml+=`<div class="stock-new" style="border-left:3px solid var(--gdim);margin-bottom:8px"><div><div class="sn-cond" style="color:var(--gdim)">Précommande${ds}</div>${pe.qty?`<div class="sn-qty">${pe.qty} réservé${pe.qty>1?'s':''}</div>`:''} ${pe.comment?`<div class="sn-comment">${pe.comment}</div>`:''}</div>${pe.price?`<div class="sn-price">${pe.price}</div>`:''}</div>`;}
+  if(r.newEntry){const ne=r.newEntry;
+    stockHtml+=`<div class="stock-new" style="margin-bottom:${r.shEntries.length?'8px':'0'}"><div><div class="sn-cond">Neuf — ${ne.condition||'Mint (M)'}</div>${ne.qty>1?`<div class="sn-qty">${ne.qty} exemplaires</div>`:''} ${ne.comment?`<div class="sn-comment">${ne.comment}</div>`:''}</div>${ne.price?`<div class="sn-price">${ne.price}</div>`:''}</div>`;}
+  if(r.shEntries.length){stockHtml+=`<div class="stock-sh-list">`;r.shEntries.forEach(sh=>{const sv=sh.sleeve?` / Pochette : ${sh.sleeve}`:'';stockHtml+=`<div class="sh-card"><div class="sh-top"><div class="sh-cond">Occasion — ${sh.condition||'?'}${sv}</div>${sh.price?`<div class="sh-price">${sh.price}</div>`:''}</div>${sh.comment?`<div class="sh-comment">${sh.comment}</div>`:''}</div>`;});stockHtml+=`</div>`;}
   stockHtml+='</div>';
-
-  // ── Tracklist ──
   const tlHtml=r.tracks.length?(()=>{
-    const hasBase=!!r.audioBase;
-    return `<div class="tl-hdr">Tracklist — ${r.tracks.length} titres${hasBase?' · extraits disponibles':''}</div>
-    <div class="tracklist" id="tl-${r.id}">
-      ${r.tracks.map((t,i)=>{
-        const cls=hasBase?'track has-audio':'track';
-        const evt=hasBase?`onclick="playTrack('${r.id}',${i})"`:'';
-        const btn=hasBase
-          ?`<button class="t-btn" onclick="event.stopPropagation();playTrack('${r.id}',${i})">
-              <svg class="ico-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-              <svg class="ico-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-            </button>`
-          :`<div style="width:24px;height:24px;flex-shrink:0"></div>`;
-        return `<div class="${cls}" id="tr-${r.id}-${i}" data-idx="${i}" ${evt}>
-          <span class="t-pos">${t.position}</span>${btn}
-          <span class="t-name">${t.title}</span>
-        </div>`;
-      }).join('')}
-    </div>`;
+    const hb=!!r.audioBase;
+    return`<div class="tl-hdr">Tracklist — ${r.tracks.length} titres${hb?' · extraits disponibles':''}</div><div class="tracklist" id="tl-${r.id}">${r.tracks.map((t,i)=>{
+      const cls=hb?'track has-audio':'track';
+      const evt=hb?`onclick="playTrack('${r.id}',${i})"`:'' ;
+      const btn=hb?`<button class="t-btn" onclick="event.stopPropagation();playTrack('${r.id}',${i})"><svg class="ico-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><svg class="ico-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>`:`<div style="width:24px;height:24px;flex-shrink:0"></div>`;
+      return`<div class="${cls}" id="tr-${r.id}-${i}" data-idx="${i}" ${evt}><span class="t-pos">${t.position}</span>${btn}<span class="t-name">${t.title}</span></div>`;
+    }).join('')}</div>`;
   })():'';
+  const descHtml=r.description?`<div class="d-desc">${r.description.replace(/<br\s*\/?>/gi,'').replace(/\n/g,'<br>')}</div>`:'';
+  return`<div class="d-specs">${spec('Artiste',r.artist,'artist')}${spec('Label',r.label,'label')}${spec('Cat. N°',r.catno,null)}${spec('Année',r.year,'year')}${spec('Pays',r.country,'country')}${fmt?`<div class="sp"><div class="sp-l">Format</div><div class="sp-v">${fmt}</div></div>`:''}</div>${tagsHtml}${stockHtml}${descHtml}${tlHtml}`;
+}
 
-  const descHtml=r.description
-    ?`<div class="d-desc">${r.description.replace(/<br\s*\/?>/gi,'').replace(/\n/g,'<br>')}</div>`
-    :'';
-
-  det.innerHTML=`<div class="det">
-    <div class="cov-col">
-      <img class="det-cover" src="${r.cover}" alt="${r.title}" onerror="this.style.opacity=.3">
-    </div>
-    <div class="info">
-      <div class="d-art">${r.artist}</div>
-      <div class="d-tit">${r.title}</div>
-      <div class="d-specs">
-        ${spec('Artiste',r.artist,'artist')}
-        ${spec('Label',r.label,'label')}
-        ${spec('Cat. N°',r.catno,null)}
-        ${spec('Année',r.year,'year')}
-        ${spec('Pays',r.country,'country')}
-        ${fmt?`<div class="sp"><div class="sp-l">Format</div><div class="sp-v">${fmt}</div></div>`:''}
-      </div>
-      ${tagsHtml}
-      ${stockHtml}
-      ${descHtml}
-      ${tlHtml}
-    </div>
-  </div>`;
-
+// ── SELECT RECORD (list mode) ──────────────────────────────────────────
+function selectRecord(id){
+  const r=ALL.find(x=>x.id===id);if(!r)return;
+  S.cur=r;S.tIdx=null;
+  document.querySelectorAll('.tile').forEach(el=>el.classList.toggle('on',el.dataset.id===id));
+  document.getElementById('empty').style.display='none';
+  const det=document.getElementById('det');det.style.display='block';
+  const badges=[r.preorder?'<span class="cbadge pre">Précommande</span>':'',!r.secondHand&&!r.preorder?'<span class="cbadge new">Neuf</span>':'',r.secondHand?'<span class="cbadge sh">Occasion</span>':''].filter(Boolean).join('');
+  det.innerHTML=`<div class="det"><div class="cov-col"><img class="det-cover" src="${r.cover}" alt="${r.title}" onerror="this.style.opacity=.3"><div class="cov-badges">${badges}</div></div><div class="info"><div class="d-art">${r.artist}</div><div class="d-tit">${r.title}</div>${buildDetailHTML(r)}</div></div>`;
   document.getElementById('main').scrollTo({top:0,behavior:'smooth'});
 }
 
-// ── AUDIO ────────────────────────────────────────────────────────────────
-function audioUrl(r,tIdx){if(!r.audioBase)return null;return r.audioBase+r.discogs_id+'_'+(tIdx+1)+'.mp3';}
+// ── MODAL (grid mode) ──────────────────────────────────────────────────
+function openModal(id){
+  const r=ALL.find(x=>x.id===id);if(!r)return;
+  S.cur=r;S.tIdx=null;
+  document.querySelectorAll('.gc').forEach(el=>el.classList.toggle('on',el.dataset.id===id));
+  document.getElementById('modal-artist').textContent=r.artist;
+  document.getElementById('modal-title').textContent=r.title;
+  document.getElementById('modal-cover').src=r.cover;
+  const badges=[r.preorder?'<span class="cbadge pre">Précommande</span>':'',!r.secondHand&&!r.preorder?'<span class="cbadge new">Neuf</span>':'',r.secondHand?'<span class="cbadge sh">Occasion</span>':''].filter(Boolean).join('');
+  document.getElementById('modal-badges').innerHTML=badges;
+  document.getElementById('modal-content').innerHTML=buildDetailHTML(r);
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal(e){
+  if(e&&e.target!==document.getElementById('modal-overlay'))return;
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+// close on Escape
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 
+// ── AUDIO ──────────────────────────────────────────────────────────────
+function audioUrl(r,i){if(!r.audioBase)return null;return r.audioBase+r.discogs_id+'_'+(i+1)+'.mp3';}
 function playTrack(recordId,tIdx){
-  const r=ALL.find(x=>x.id===recordId); if(!r?.audioBase) return;
-  const track=r.tracks[tIdx]; if(!track) return;
+  const r=ALL.find(x=>x.id===recordId);if(!r?.audioBase)return;
+  const track=r.tracks[tIdx];if(!track)return;
   if(S.cur?.id===r.id&&S.tIdx===tIdx){aud.paused?aud.play():aud.pause();return;}
   S.cur=r;S.tIdx=tIdx;
-  aud.src=audioUrl(r,tIdx);
-  aud.volume=parseFloat(document.getElementById('vol').value);
-  aud.play().catch(()=>updateUI(recordId,tIdx,false));
+  aud.src=audioUrl(r,tIdx);aud.volume=parseFloat(document.getElementById('vol').value);
+  aud.play().catch(()=>updUI(recordId,tIdx,false));
   document.getElementById('p-cov').src=r.cover;
   document.getElementById('p-trk').textContent=track.title;
   document.getElementById('p-art').textContent=r.artist;
   document.getElementById('pbar').classList.add('on');
 }
-
-function updateUI(recordId,tIdx,playing){
+function updUI(rid,ti,playing){
   document.querySelectorAll('.track').forEach(el=>el.classList.remove('playing'));
-  if(playing){const el=document.getElementById(`tr-${recordId}-${tIdx}`);if(el)el.classList.add('playing');}
+  if(playing){const el=document.getElementById(`tr-${rid}-${ti}`);if(el)el.classList.add('playing');}
   document.getElementById('b-pp').classList.toggle('on',playing);
 }
-
 const fmtT=s=>(!s||isNaN(s))?'0:00':Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
-aud.addEventListener('timeupdate',()=>{
-  const p=aud.duration?(aud.currentTime/aud.duration)*100:0;
-  document.getElementById('fill').style.width=p+'%';
-  document.getElementById('tc').textContent=fmtT(aud.currentTime);
-  document.getElementById('tt').textContent=fmtT(aud.duration);
-});
-aud.addEventListener('play',()=>updateUI(S.cur?.id,S.tIdx,true));
-aud.addEventListener('pause',()=>updateUI(S.cur?.id,S.tIdx,false));
-aud.addEventListener('ended',()=>{
-  if(S.cur&&S.tIdx!==null&&S.tIdx<S.cur.tracks.length-1&&S.cur.audioBase)playTrack(S.cur.id,S.tIdx+1);
-  else updateUI(S.cur?.id,S.tIdx,false);
-});
+aud.addEventListener('timeupdate',()=>{const p=aud.duration?(aud.currentTime/aud.duration)*100:0;document.getElementById('fill').style.width=p+'%';document.getElementById('tc').textContent=fmtT(aud.currentTime);document.getElementById('tt').textContent=fmtT(aud.duration);});
+aud.addEventListener('play',()=>updUI(S.cur?.id,S.tIdx,true));
+aud.addEventListener('pause',()=>updUI(S.cur?.id,S.tIdx,false));
+aud.addEventListener('ended',()=>{if(S.cur&&S.tIdx!==null&&S.tIdx<S.cur.tracks.length-1&&S.cur.audioBase)playTrack(S.cur.id,S.tIdx+1);else updUI(S.cur?.id,S.tIdx,false);});
 document.getElementById('b-pp').addEventListener('click',()=>{aud.paused?aud.play():aud.pause();});
 document.getElementById('b-prev').addEventListener('click',()=>{if(S.cur&&S.tIdx>0)playTrack(S.cur.id,S.tIdx-1);});
 document.getElementById('b-next').addEventListener('click',()=>{if(S.cur&&S.tIdx!==null&&S.tIdx<S.cur.tracks.length-1)playTrack(S.cur.id,S.tIdx+1);});
-document.getElementById('prog').addEventListener('click',e=>{
-  if(!aud.duration)return;
-  const rc=e.currentTarget.getBoundingClientRect();
-  aud.currentTime=((e.clientX-rc.left)/rc.width)*aud.duration;
-});
+document.getElementById('prog').addEventListener('click',e=>{if(!aud.duration)return;const rc=e.currentTarget.getBoundingClientRect();aud.currentTime=((e.clientX-rc.left)/rc.width)*aud.duration;});
 document.getElementById('vol').addEventListener('input',e=>{aud.volume=+e.target.value;});
 
-// ── FILTER TABS ──────────────────────────────────────────────────────────
+// ── FILTER TABS (sidebar) ──────────────────────────────────────────────
 document.querySelectorAll('.ftab').forEach(btn=>{
   btn.addEventListener('click',()=>{
     document.querySelectorAll('.ftab').forEach(b=>b.classList.remove('on'));
-    btn.classList.add('on'); S.filter=btn.dataset.f; applyFilters();
+    btn.classList.add('on');S.filter=btn.dataset.f;
+    // sync grid tabs
+    document.querySelectorAll('.gftab').forEach(b=>b.classList.toggle('on',b.dataset.f===S.filter));
+    applyFilters();
+  });
+});
+// ── FILTER TABS (grid) ─────────────────────────────────────────────────
+document.querySelectorAll('.gftab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.gftab').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');S.filter=btn.dataset.f;
+    document.querySelectorAll('.ftab').forEach(b=>b.classList.toggle('on',b.dataset.f===S.filter));
+    applyFilters();
   });
 });
 
-// ── SEARCH ───────────────────────────────────────────────────────────────
+// ── SEARCH ────────────────────────────────────────────────────────────
 let _st;
-document.getElementById('search').addEventListener('input',e=>{
-  clearTimeout(_st);
-  if(S.nav) clearNav();
-  _st=setTimeout(()=>{S.q=e.target.value;applyFilters();},160);
-});
+function doSearch(q){clearTimeout(_st);if(S.nav)clearNav();_st=setTimeout(()=>{S.q=q;applyFilters();},160);}
+document.getElementById('search').addEventListener('input',e=>doSearch(e.target.value));
+document.getElementById('grid-search').addEventListener('input',e=>doSearch(e.target.value));
 
-// ── INIT ─────────────────────────────────────────────────────────────────
+// ── INIT ──────────────────────────────────────────────────────────────
 loadData(false);
 </script>
 </body>
