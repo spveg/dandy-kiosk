@@ -88,7 +88,10 @@ aside{
 }
 body.mode-grid aside{opacity:0;pointer-events:none}
 .search-wrap{position:relative;padding:10px 12px;border-bottom:1px solid var(--border)}
-.search-wrap input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:8px 10px 8px 28px;color:var(--text);font-family:'Epilogue',sans-serif;font-size:.83rem;outline:none;transition:border-color .2s}
+.search-wrap input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:8px 28px 8px 28px;color:var(--text);font-family:'Epilogue',sans-serif;font-size:.83rem;outline:none;transition:border-color .2s}
+.search-clear{position:absolute;right:20px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--tdim);cursor:pointer;font-size:.75rem;padding:2px 4px;transition:color .15s;line-height:1}
+.search-clear:hover{color:var(--cream)}
+.grid-search-wrap input{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:3px;padding:7px 28px 7px 28px;color:var(--text);font-family:'Epilogue',sans-serif;font-size:.83rem;outline:none;transition:border-color .2s}
 .search-wrap input:focus{border-color:var(--gdim)}
 .search-wrap input::placeholder{color:var(--tdim)}
 .si{position:absolute;left:22px;top:50%;transform:translateY(-50%);color:var(--tdim);font-size:.88rem;pointer-events:none}
@@ -330,8 +333,10 @@ body.mode-grid main{display:none}
 #pbar.on{opacity:1;pointer-events:all}
 .p-cov{width:38px;height:38px;border-radius:2px;object-fit:cover;flex-shrink:0;background:var(--border)}
 .p-inf{flex:1;min-width:0}
-.p-trk{font-size:.8rem;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.p-art{font-family:'Space Mono',monospace;font-size:.52rem;color:var(--gdim);letter-spacing:.07em;text-transform:uppercase}
+.p-trk{font-size:.8rem;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .15s}
+.p-trk:hover{color:var(--gold)}
+.p-art{font-family:'Space Mono',monospace;font-size:.52rem;color:var(--gdim);letter-spacing:.07em;text-transform:uppercase;transition:color .15s}
+.p-art:hover{color:var(--gold)}
 .pctrl{display:flex;align-items:center;gap:6px}
 .cb{width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--tdim);transition:all .15s;flex-shrink:0}
 .cb:hover{border-color:var(--gdim);color:var(--gdim)}
@@ -396,6 +401,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;heigh
   <div class="grid-search-wrap">
     <span class="gsi">⌕</span>
     <input id="grid-search" type="text" placeholder="Artiste, titre, label, genre…" autocomplete="off">
+    <button class="search-clear" id="grid-search-clear" onclick="clearSearch('grid-search')" style="display:none">✕</button>
   </div>
   <div class="hd-right">
     <div class="badge-event">Paris Loves Vinyl</div>
@@ -418,6 +424,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;heigh
   <div class="search-wrap">
     <span class="si">⌕</span>
     <input id="search" type="text" placeholder="Artiste, titre, label…" autocomplete="off">
+    <button class="search-clear" id="search-clear" onclick="clearSearch('search')" style="display:none">✕</button>
   </div>
   <div class="afbar" id="afbar">
     <span class="af-label" id="af-label"></span>
@@ -633,20 +640,36 @@ function navTo(type,value){
   document.getElementById('search').value='';
   document.getElementById('grid-search').value='';
   const TL={artist:'Artiste',label:'Label',year:'Année',country:'Pays',genre:'Genre'};
-  document.getElementById('af-label').textContent=`${TL[type]||type} : ${value}`;
+  const lbl=`${TL[type]||type} : ${value}`;
+  document.getElementById('af-label').textContent=lbl;
   document.getElementById('afbar').classList.add('show');
   document.getElementById('nav-crumb').style.display='flex';
   document.getElementById('crumb-label').textContent=value;
-  // switch to list view for navigation
-  setView('list');
+  updateGridNavPill();
   applyFilters();
-  document.getElementById('list').scrollTo({top:0,behavior:'smooth'});
+  if(S.view==='list')document.getElementById('list').scrollTo({top:0,behavior:'smooth'});
+  else document.getElementById('grid-area').scrollTo({top:0,behavior:'smooth'});
 }
 function clearNav(){
   S.nav=null;
   document.getElementById('afbar').classList.remove('show');
   document.getElementById('nav-crumb').style.display='none';
+  updateGridNavPill();
   applyFilters();
+}
+function updateGridNavPill(){
+  let pill=document.getElementById('grid-nav-pill');
+  if(!S.nav){if(pill)pill.remove();return;}
+  if(!pill){
+    pill=document.createElement('div');pill.id='grid-nav-pill';
+    pill.style.cssText='display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:1px solid var(--gold);background:rgba(201,168,76,.1);font-family:"Space Mono",monospace;font-size:.52rem;letter-spacing:.07em;color:var(--gold);text-transform:uppercase;white-space:nowrap;';
+    const txt=document.createTextNode('');
+    const x=document.createElement('span');x.textContent='✕';x.style.cssText='cursor:pointer;margin-left:2px;opacity:.8;';x.onclick=clearNav;
+    pill.appendChild(txt);pill.appendChild(x);
+    document.getElementById('grid-filterbar').insertBefore(pill,document.getElementById('count-grid'));
+  }
+  const TL={artist:'Artiste',label:'Label',year:'Année',country:'Pays',genre:'Genre'};
+  pill.childNodes[0].nodeValue=`${TL[S.nav.type]||S.nav.type} : ${S.nav.value} `;
 }
 
 // ── FILTERS ────────────────────────────────────────────────────────────
@@ -802,10 +825,20 @@ function playTrack(recordId,tIdx){
   if(S.cur?.id===r.id&&S.tIdx===tIdx){aud.paused?aud.play():aud.pause();return;}
   S.cur=r;S.tIdx=tIdx;
   aud.src=audioUrl(r,tIdx);aud.volume=parseFloat(document.getElementById('vol').value);
-  aud.play().catch(()=>updUI(recordId,tIdx,false));
+  aud.play().catch(()=>{
+    // file missing — try next track automatically
+    if(tIdx+1<r.tracks.length)playTrack(recordId,tIdx+1);
+    else updUI(recordId,tIdx,false);
+  });
+  // update player bar
   document.getElementById('p-cov').src=r.cover;
   document.getElementById('p-trk').textContent=track.title;
   document.getElementById('p-art').textContent=r.artist;
+  // make title & artist clickable
+  document.getElementById('p-trk').onclick=()=>{ if(S.view==='list')selectRecord(r.id); else openModal(r.id); };
+  document.getElementById('p-trk').style.cursor='pointer';
+  document.getElementById('p-art').onclick=()=>navTo('artist',r.artist);
+  document.getElementById('p-art').style.cursor='pointer';
   document.getElementById('pbar').classList.add('on');
 }
 function updUI(rid,ti,playing){
@@ -817,7 +850,14 @@ const fmtT=s=>(!s||isNaN(s))?'0:00':Math.floor(s/60)+':'+String(Math.floor(s%60)
 aud.addEventListener('timeupdate',()=>{const p=aud.duration?(aud.currentTime/aud.duration)*100:0;document.getElementById('fill').style.width=p+'%';document.getElementById('tc').textContent=fmtT(aud.currentTime);document.getElementById('tt').textContent=fmtT(aud.duration);});
 aud.addEventListener('play',()=>updUI(S.cur?.id,S.tIdx,true));
 aud.addEventListener('pause',()=>updUI(S.cur?.id,S.tIdx,false));
-aud.addEventListener('ended',()=>{if(S.cur&&S.tIdx!==null&&S.tIdx<S.cur.tracks.length-1&&S.cur.audioBase)playTrack(S.cur.id,S.tIdx+1);else updUI(S.cur?.id,S.tIdx,false);});
+aud.addEventListener('ended',()=>{
+  // auto-advance: try next tracks until one loads or end of album
+  if(S.cur&&S.tIdx!==null){
+    const next=S.tIdx+1;
+    if(next<S.cur.tracks.length&&S.cur.audioBase)playTrack(S.cur.id,next);
+    else updUI(S.cur?.id,S.tIdx,false);
+  }
+});
 document.getElementById('b-pp').addEventListener('click',()=>{aud.paused?aud.play():aud.pause();});
 document.getElementById('b-prev').addEventListener('click',()=>{if(S.cur&&S.tIdx>0)playTrack(S.cur.id,S.tIdx-1);});
 document.getElementById('b-next').addEventListener('click',()=>{if(S.cur&&S.tIdx!==null&&S.tIdx<S.cur.tracks.length-1)playTrack(S.cur.id,S.tIdx+1);});
@@ -846,9 +886,28 @@ document.querySelectorAll('.gftab').forEach(btn=>{
 
 // ── SEARCH ────────────────────────────────────────────────────────────
 let _st;
-function doSearch(q){clearTimeout(_st);if(S.nav)clearNav();_st=setTimeout(()=>{S.q=q;applyFilters();},160);}
-document.getElementById('search').addEventListener('input',e=>doSearch(e.target.value));
-document.getElementById('grid-search').addEventListener('input',e=>doSearch(e.target.value));
+function doSearch(q,sourceId){
+  clearTimeout(_st);
+  // sync the other search input
+  const otherId=sourceId==='search'?'grid-search':'search';
+  document.getElementById(otherId).value=q;
+  // show/hide clear buttons
+  document.getElementById('search-clear').style.display=q?'block':'none';
+  document.getElementById('grid-search-clear').style.display=q?'block':'none';
+  if(S.nav)clearNav();
+  _st=setTimeout(()=>{S.q=q;applyFilters();},160);
+}
+function clearSearch(inputId){
+  document.getElementById(inputId).value='';
+  document.getElementById('search').value='';
+  document.getElementById('grid-search').value='';
+  document.getElementById('search-clear').style.display='none';
+  document.getElementById('grid-search-clear').style.display='none';
+  S.q='';applyFilters();
+  document.getElementById(inputId).focus();
+}
+document.getElementById('search').addEventListener('input',e=>doSearch(e.target.value,'search'));
+document.getElementById('grid-search').addEventListener('input',e=>doSearch(e.target.value,'grid-search'));
 
 // ── INIT ──────────────────────────────────────────────────────────────
 loadData(false);
