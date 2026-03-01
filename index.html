@@ -295,7 +295,19 @@ body.mode-grid main{display:none}
 .stock-sh-list{display:flex;flex-direction:column;gap:7px}
 .sh-card{padding:11px 13px;background:var(--s2);border:1px solid var(--border);border-radius:4px;border-left:3px solid var(--gdim)}
 .sh-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:5px}
-.sh-cond{font-family:'Space Mono',monospace;font-size:.58rem;letter-spacing:.07em;color:#c4a870;text-transform:uppercase}
+.sh-cond{font-family:'Space Mono',monospace;font-size:.56rem;letter-spacing:.07em;text-transform:uppercase;display:flex;flex-direction:column;gap:4px}
+.sh-grade{display:inline-flex;align-items:center;gap:6px}
+.sh-grade-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;display:inline-block}
+.sh-grade-lbl{font-family:'Space Mono',monospace;font-size:.56rem;letter-spacing:.07em;text-transform:uppercase}
+/* Goldmine grade colors — muted, on-brand */
+.gm-m   {color:#a8d8a0} .dot-m   {background:#5a9b52}   /* Mint — sage green */
+.gm-nm  {color:#8ecfc8} .dot-nm  {background:#3d8c85}   /* Near Mint — teal */
+.gm-vgp {color:#a8b8d8} .dot-vgp {background:#4a6a9a}   /* VG+ — steel blue */
+.gm-vg  {color:#c4b890} .dot-vg  {background:#8a7840}   /* VG — warm khaki */
+.gm-gp  {color:#c4a060} .dot-gp  {background:#8a6030}   /* G+ — amber */
+.gm-g   {color:#b87858} .dot-g   {background:#7a4830}   /* G — terracotta */
+.gm-f   {color:#a06868} .dot-f   {background:#6a3838}   /* F — muted red */
+.gm-p   {color:#887878} .dot-p   {background:#504040}   /* P — grey-mauve */
 .sh-price{font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--gold);flex-shrink:0}
 .sh-comment{font-size:.77rem;color:var(--cdim);line-height:1.5}
 
@@ -698,6 +710,25 @@ function applyFilters(){
   if(S.view==='list')renderList();else renderGrid();
 }
 
+// ── GOLDMINE GRADE helper ──────────────────────────────────────────────
+function gmGrade(raw){
+  if(!raw)return{cls:'gm-p',dot:'dot-p',label:'?'};
+  const s=raw.toLowerCase().replace(/[\s()]/g,'');
+  if(s==='m'||s.startsWith('mint'))               return{cls:'gm-m',  dot:'dot-m',  label:raw};
+  if(s==='nm'||s==='nm+'||s.startsWith('nearmint'))return{cls:'gm-nm', dot:'dot-nm', label:raw};
+  if(s==='vg+'||s.includes('vg+')||s.includes('veryg+'))return{cls:'gm-vgp',dot:'dot-vgp',label:raw};
+  if(s==='vg'||s.startsWith('veryg'))             return{cls:'gm-vg', dot:'dot-vg', label:raw};
+  if(s==='g+'||s.includes('good+'))               return{cls:'gm-gp', dot:'dot-gp', label:raw};
+  if(s==='g'||s.startsWith('good'))               return{cls:'gm-g',  dot:'dot-g',  label:raw};
+  if(s.startsWith('fair'))                        return{cls:'gm-f',  dot:'dot-f',  label:raw};
+  if(s==='p'||s.startsWith('poor'))               return{cls:'gm-p',  dot:'dot-p',  label:raw};
+  return{cls:'gm-vg',dot:'dot-vg',label:raw};
+}
+function gradeHTML(raw,roleLabel){
+  const{cls,dot,label}=gmGrade(raw);
+  return`<div class="sh-grade"><span class="sh-grade-dot ${dot}"></span><span class="sh-grade-lbl" style="color:var(--tdim);opacity:.6;margin-right:1px">${roleLabel} :</span><span class="sh-grade-lbl ${cls}">${label}</span></div>`;
+}
+
 // ── BADGE HELPERS ──────────────────────────────────────────────────────
 function statusBadge(r){
   if(r.hasNew&&r.hasSh)return{cls:'lbl-mix',txt:'Neuf + Occ.'};
@@ -769,8 +800,12 @@ function buildDetailHTML(r){
   if(r.preEntry){const pe=r.preEntry;const ds=pe.availableDate?` — dispo ${new Date(pe.availableDate).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}`:'';
     stockHtml+=`<div class="stock-new" style="border-left:3px solid var(--gdim);margin-bottom:8px"><div><div class="sn-cond" style="color:var(--gdim)">Précommande${ds}</div>${pe.qty?`<div class="sn-qty">${pe.qty} réservé${pe.qty>1?'s':''}</div>`:''} ${pe.comment?`<div class="sn-comment">${pe.comment}</div>`:''}</div>${pe.price?`<div class="sn-price">${pe.price}</div>`:''}</div>`;}
   if(r.newEntry){const ne=r.newEntry;
-    stockHtml+=`<div class="stock-new" style="margin-bottom:${r.shEntries.length?'8px':'0'}"><div><div class="sn-cond">Neuf — ${ne.condition||'Mint (M)'}</div>${ne.qty>1?`<div class="sn-qty">${ne.qty} exemplaires</div>`:''} ${ne.comment?`<div class="sn-comment">${ne.comment}</div>`:''}</div>${ne.price?`<div class="sn-price">${ne.price}</div>`:''}</div>`;}
-  if(r.shEntries.length){stockHtml+=`<div class="stock-sh-list">`;r.shEntries.forEach(sh=>{const sv=sh.sleeve?` / Pochette : ${sh.sleeve}`:'';stockHtml+=`<div class="sh-card"><div class="sh-top"><div class="sh-cond">Occasion — ${sh.condition||'?'}${sv}</div>${sh.price?`<div class="sh-price">${sh.price}</div>`:''}</div>${sh.comment?`<div class="sh-comment">${sh.comment}</div>`:''}</div>`;});stockHtml+=`</div>`;}
+    stockHtml+=`<div class="stock-new" style="margin-bottom:${r.shEntries.length?'8px':'0'}"><div><div class="sn-cond">${gradeHTML(ne.condition||'Mint (M)','Disque')}</div>${ne.qty>1?`<div class="sn-qty">${ne.qty} exemplaires</div>`:''} ${ne.comment?`<div class="sn-comment">${ne.comment}</div>`:''}</div>${ne.price?`<div class="sn-price">${ne.price}</div>`:''}</div>`;}
+  if(r.shEntries.length){stockHtml+=`<div class="stock-sh-list">`;r.shEntries.forEach(sh=>{
+    const mediaGrade=gradeHTML(sh.condition,'Disque');
+    const sleeveGrade=sh.sleeve?gradeHTML(sh.sleeve,'Pochette'):'';
+    stockHtml+=`<div class="sh-card"><div class="sh-top"><div class="sh-cond">${mediaGrade}${sleeveGrade}</div>${sh.price?`<div class="sh-price">${sh.price}</div>`:''}</div>${sh.comment?`<div class="sh-comment">${sh.comment}</div>`:''}</div>`;
+  });stockHtml+=`</div>`;}
   stockHtml+='</div>';
   const tlHtml=r.tracks.length?(()=>{
     const hb=!!r.audioBase;
