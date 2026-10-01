@@ -1,95 +1,64 @@
 # Pipeline audio DandyRecords
 
-Convertit les fichiers audio des disques (flac, wav, aiff, m4a, mp3…) en **MP3 256 kbps**,
-les renomme au format du kiosk (`{discogs_id}_1.mp3`, `{discogs_id}_2.mp3`…) et les envoie sur Cloudflare R2.
+Ces outils prennent ta bibliothèque musicale telle qu'elle est rangée (`Artiste\Année - Album\morceaux`). Ils retrouvent les albums qui sont dans ton stock (le Google Sheets du kiosk), convertissent leurs morceaux en **MP3 256 kbps**, les renomment pour le kiosk (`{discogs_id}_1.mp3`…) et les envoient sur Cloudflare R2.
 
-Les fichiers d'origine ne sont jamais modifiés. Le script est relançable à volonté : ce qui est déjà fait est sauté.
+Tes fichiers d'origine ne sont jamais modifiés. Les albums qui ne sont pas en stock sont ignorés.
+
+## Les 3 fichiers à double-cliquer
+
+| Fichier | Quand |
+|---|---|
+| `Installer.bat` | une seule fois au début (ou pour changer de dossier / de token R2) |
+| `Simulation.bat` | pour voir ce qui serait fait, sans rien toucher |
+| `Convertir-et-envoyer.bat` | à chaque fois que tu as de nouveaux albums ou de nouveaux disques en stock |
 
 ---
 
-## Installation (une seule fois)
+## Installation (une fois, ~10 min)
 
-### 1. Copier le dossier `tools` sur le PC
+1. Sur GitHub, page du repo → bouton vert **Code** → **Download ZIP**. Dézippe, et copie le dossier **`tools`** où tu veux (par ex. `Documents\dandy-tools`).
+2. Ouvre un onglet sur **dash.cloudflare.com** (tu en auras besoin à l'étape 3 de l'installeur).
+3. Double-clic sur **`Installer.bat`** et suis les questions :
+   - **Logiciels** : installe ffmpeg et rclone. Si Windows demande une autorisation, accepte.
+   - **Dossier de musique** : une fenêtre s'ouvre, choisis le dossier qui contient tes dossiers d'artistes.
+   - **Cloudflare R2** : l'installeur te dit où cliquer pour créer une clé d'accès, puis te demande de coller 4 valeurs : nom du bucket, Access Key ID, Secret Access Key, endpoint. Pour coller dans la fenêtre noire, fais un **clic droit**. L'installeur teste ensuite la connexion.
 
-Récupère le dossier `tools` du repo (bouton **Code → Download ZIP** sur GitHub) et mets-le où tu veux, par exemple dans `Documents\dandy-tools`.
-
-### 2. Installer ffmpeg et rclone
-
-Ouvre PowerShell et lance :
-
-```powershell
-winget install Gyan.FFmpeg
-winget install Rclone.Rclone
-```
-
-Ferme puis rouvre PowerShell pour qu'ils soient reconnus.
-
-### 3. Connexion à R2
-
-1. Dashboard Cloudflare → **R2** → **Manage R2 API Tokens** (ou « API » en haut à droite de la page R2) → **Create API token**.
-2. Permissions : **Object Read & Write**, limité au bucket du kiosk.
-3. Note les trois infos affichées (elles ne sont montrées qu'une fois) :
-   - Access Key ID
-   - Secret Access Key
-   - l'endpoint `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`
-4. Dans PowerShell, remplace les trois valeurs puis lance :
-
-```powershell
-rclone config create r2 s3 provider=Cloudflare access_key_id=TON_ACCESS_KEY secret_access_key=TON_SECRET endpoint=https://TON_ACCOUNT_ID.r2.cloudflarestorage.com acl=private no_check_bucket=true
-```
-
-5. Vérifie que ça marche (doit lister le nom de ton bucket) :
-
-```powershell
-rclone lsd r2:
-```
-
-Les identifiants restent sur ton PC, dans la config rclone. Ils ne sont jamais dans le repo.
-
-### 4. Vérifier la config du script
-
-En haut de `dandy-audio.ps1`, bloc `CONFIG` :
-
-| Réglage | Rôle |
-|---|---|
-| `$Source` | dossier qui contient un sous-dossier par disque |
-| `$Sortie` | où sont rangés les MP3 convertis (hors kDrive, pour ne pas les synchroniser) |
-| `$R2` | `r2:` + **nom exact de ton bucket** (visible avec `rclone lsd r2:`) |
+Si Windows affiche « Windows a protégé votre ordinateur », clique sur **Informations complémentaires → Exécuter quand même**.
 
 ---
 
 ## Utilisation
 
-1. Dans le dossier source, crée **un sous-dossier par disque** et mets-y ses fichiers audio, dans n'importe quel format.
+1. Mets à jour ton stock dans le Google Sheets, comme d'habitude.
 2. Double-clic sur **`Convertir-et-envoyer.bat`**.
-3. Lis le bilan en fin de fenêtre, en particulier la section **« À revoir »**.
+3. Lis le **Bilan** à la fin :
+   - **À revoir** : ce qui demande ton attention (voir ci-dessous).
+   - **`_stock-sans-audio.txt`** : les disques en stock pour lesquels aucun album n'a été trouvé dans ta bibliothèque.
+   - **`_dossiers-non-reconnus.txt`** : les albums de ta bibliothèque qui ne sont pas dans le stock (normal).
 
-### Nommer les dossiers
+Les listes sont dans le dossier de sortie (`Musique\dandy-mp3`). Tu peux relancer autant que tu veux : ce qui est déjà fait est sauté.
 
-Le script doit savoir à quel disque correspond chaque dossier. Deux façons :
+### Comment un album est reconnu
 
-- **Le plus sûr** : faire commencer le nom par le Discogs ID → `22429213 - Anri - Timely`
-- **Automatique** : laisser le nom « Artiste - Titre » de ton rip → `Anri - Timely!!`. Le script cherche le disque dans le Google Sheets. S'il ne trouve pas ou hésite entre plusieurs, il le signale dans « À revoir » : ajoute alors l'ID devant le nom du dossier.
+Le script compare le chemin du dossier (`Mariya Takeuchi\1984 - Variety`) avec l'artiste, le titre et l'année du Google Sheets, sans tenir compte des accents ni de la ponctuation.
 
-Les dossiers dont le nom commence par `_` sont ignorés.
+Si un album n'est pas reconnu, ou si plusieurs disques correspondent, **ajoute le Discogs ID au début du nom du dossier d'album** : `Mariya Takeuchi\26372551 - Variety`. L'ID est prioritaire sur tout le reste.
 
-### Ordre des morceaux
+### Messages « À revoir » fréquents
 
-Les fichiers sont numérotés dans l'ordre de leur nom, en ordre « naturel » : `2` avant `10`. Des noms de rip classiques (`01 - …`, `02 - …`) marchent tels quels. Les sous-dossiers `CD1`, `CD2` sont pris dans l'ordre.
+- **« Le Sheets indique 10 morceaux, le dossier en contient 12 »** : ton rip a des bonus, ou il manque des pistes. Le kiosk numérote les morceaux dans l'ordre de la tracklist : avec un écart, le son ne correspond plus au titre affiché. Déplace les bonus dans un sous-dossier dont le nom commence par `_` (par ex. `_bonus`) : il sera ignoré.
+- **« même disque que … »** : deux dossiers correspondent au même disque (par ex. l'original et un remaster). Mets le Discogs ID devant celui à utiliser.
+- **« ID … absent du Google Sheets »** : l'ID devant le dossier ne correspond à aucune ligne du Sheets (faute de frappe ?).
 
-Si le nombre de fichiers ne correspond pas au nombre de morceaux de la tracklist du Sheets, le script prévient. Les numéros risquent alors d'être décalés par rapport aux titres affichés dans le kiosk : vérifie qu'il ne manque pas une piste, ou qu'il n'y a pas un bonus en trop.
+### Règles de rangement
 
-### Options
-
-| Lanceur / commande | Effet |
-|---|---|
-| `Simulation.bat` | montre ce qui serait fait, sans rien convertir ni envoyer |
-| `dandy-audio.ps1 -SansUpload` | convertit seulement |
-| `dandy-audio.ps1 -Forcer` | reconvertit tout, même ce qui est déjà à jour |
+- Les morceaux sont pris dans l'ordre de leur nom de fichier : `01 - …`, `02 - …` (`2` passe bien avant `10`).
+- Les sous-dossiers `CD1`, `CD2`, `Disc 1`… sont regroupés dans le même album.
+- Tout dossier dont le nom commence par `_` est ignoré.
 
 ---
 
-## Derniers pas
+## Dernière étape côté kiosk
 
-- Dans le Google Sheets, la colonne `item_asset_link` des disques qui ont de l'audio doit contenir l'URL publique du bucket (`https://pub-….r2.dev/`). La liste des Discogs ID qui ont de l'audio est écrite dans `_disques-avec-audio.txt`, dans le dossier de sortie.
-- Ouvre ensuite le kiosk avec `?check` à la fin de l'URL pour vérifier que tous les morceaux se chargent.
+- Dans le Google Sheets, la colonne **`item_asset_link`** des disques qui ont du son doit contenir l'URL publique du bucket : `https://pub-….r2.dev/`.
+- Ouvre le kiosk avec **`?check`** à la fin de l'adresse pour vérifier que tous les morceaux se chargent.
