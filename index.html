@@ -53,7 +53,8 @@ body.mode-grid{grid-template-columns:0px 1fr;}
 
 /* HEADER */
 header{grid-area:hd;display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-bottom:1px solid var(--border);background:var(--surface);gap:10px;z-index:10;box-shadow:0 1px 0 var(--border);}
-.logo{display:flex;align-items:baseline;gap:8px;flex-shrink:0}
+.logo{display:flex;align-items:baseline;gap:8px;flex-shrink:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;cursor:default}
+.logo.pressing .logo-name{opacity:.45;transition:opacity 1.2s}
 .logo-name{font-family:'Epilogue',sans-serif;font-size:1.25rem;font-weight:700;color:var(--violet);letter-spacing:.04em;text-transform:uppercase}
 .logo-sub{font-size:.65rem;letter-spacing:.18em;color:var(--tdim);text-transform:uppercase;font-weight:400}
 .badge-event{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--violet);border:1.5px solid var(--vlav);background:var(--vlight);padding:4px 10px;border-radius:20px;flex-shrink:0}
@@ -64,7 +65,7 @@ header{grid-area:hd;display:flex;align-items:center;justify-content:space-betwee
 .crumb-root{cursor:pointer;opacity:.5;transition:opacity .15s;flex-shrink:0}
 .crumb-root:hover{opacity:1}
 .hd-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.btn-refresh{background:none;border:1.5px solid var(--border2);border-radius:6px;color:var(--tdim);font-size:.65rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:5px 10px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px}
+.btn-refresh{display:none!important;background:none;border:1.5px solid var(--border2);border-radius:6px;color:var(--tdim);font-size:.65rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:5px 10px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px}
 .btn-refresh:hover{border-color:var(--violet);color:var(--violet)}
 .btn-refresh.spinning .ri{animation:spin .7s linear infinite}
 .ri{display:inline-block}
@@ -207,6 +208,12 @@ body.mode-grid main{display:none}
 .gc:active{transform:scale(.97)}
 .tile:active,.track.has-audio:active{background:var(--vlight)}
 button:active{transform:scale(.94)}
+
+/* TRI */
+.sort-sel{-webkit-appearance:none;appearance:none;font-family:'Epilogue',sans-serif;font-size:.74rem;font-weight:600;letter-spacing:.04em;color:var(--violet);background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237C3AED'/%3E%3C/svg%3E") no-repeat right 11px center;border:1.5px solid var(--border2);border-radius:20px;padding:8px 30px 8px 13px;cursor:pointer;outline:none}
+.sb-toolbar .sort-sel{padding:5px 26px 5px 10px;font-size:.7rem}
+.grid-filterbar .sort-sel{margin-left:auto}
+.grid-filterbar .grid-count{margin-left:8px}
 
 /* MODAL */
 #modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:76px;z-index:50;background:rgba(40,20,80,.38);align-items:center;justify-content:center;padding:20px}
@@ -363,7 +370,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 </div>
 
 <header>
-  <div class="logo">
+  <div class="logo" id="logo">
     <span class="logo-name">DandyRecords</span>
     <span class="logo-sub">Paris</span>
   </div>
@@ -421,6 +428,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
   </div>
   <div class="sb-toolbar">
     <div class="count" id="count-list">—</div>
+    <select class="sort-sel" id="sort-list" aria-label="Trier"><option value="sel">Tri : sélection</option><option value="artist">Artiste A→Z</option><option value="title">Titre A→Z</option><option value="price-asc">Prix croissant</option><option value="price-desc">Prix décroissant</option><option value="year-desc">Année (récent)</option><option value="year-asc">Année (ancien)</option></select>
   </div>
   <div class="list" id="list"></div>
 </aside>
@@ -448,6 +456,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
     <button class="gftab" data-f="soul">Soul/Funk</button>
     <button class="gftab" data-f="elec">Electronic</button>
     <button class="gftab" data-f="ost">Soundtrack</button>
+    <select class="sort-sel" id="sort-grid" aria-label="Trier"><option value="sel">Tri : sélection</option><option value="artist">Artiste A→Z</option><option value="title">Titre A→Z</option><option value="price-asc">Prix croissant</option><option value="price-desc">Prix décroissant</option><option value="year-desc">Année (récent)</option><option value="year-asc">Année (ancien)</option></select>
     <span class="grid-count" id="count-grid">—</span>
   </div>
   <div class="grid-inner" id="grid-inner"></div>
@@ -491,7 +500,7 @@ const IDLE_PLAYING_MS=15*60*1000; // musique en cours mais personne ne touche �
 
 // ── STATE ──────────────────────────────────────────────────────────────
 let ALL=[];
-const S={filtered:[],cur:null,play:null,filter:'all',q:'',nav:null,view:'grid'}; // cur = fiche ouverte, play = {r,i} en lecture
+const S={filtered:[],cur:null,play:null,filter:'all',sort:'sel',q:'',nav:null,view:'grid'}; // cur = fiche ouverte, play = {r,i} en lecture
 const aud=document.getElementById('aud');
 
 // ── CSV PARSER ─────────────────────────────────────────────────────────
@@ -580,7 +589,7 @@ function buildGroups(rows){
       description:(rep.item_long_description||rep.item_short_description||'').trim(),
       tracks,audioBase,url:rep.item_eshop_link,
       fav:listings.some(l=>/^(true|x|oui|yes|1|♥)$/i.test((l.coup_de_coeur||'').trim())),
-      newEntry,preEntry,shEntries,hasNew,hasPre,hasSh,displayPrice,
+      newEntry,preEntry,shEntries,hasNew,hasPre,hasSh,displayPrice,minPrice:allP.length?Math.min(...allP):Infinity,
       secondHand:hasSh&&!hasNew&&!hasPre,preorder:hasPre&&!hasNew&&!hasSh,isNew:hasNew&&!hasSh,
     };
   });
@@ -687,14 +696,33 @@ function matchNav(r){
   if(!S.nav)return true;const v=S.nav.value;
   switch(S.nav.type){case'artist':return r.artist===v;case'label':return r.label===v;case'year':return r.year===v;case'country':return r.country===v;case'genre':return r.tags.includes(v);default:return true;}
 }
+// tri stable : à égalité, l'ordre du Sheets est conservé
+const cmpTxt=(a,b)=>(a||'').localeCompare(b||'','fr',{sensitivity:'base',ignorePunctuation:true});
+const yr=r=>parseInt(r.year)||0;
+const SORTS={
+  sel:(a,b)=>b.fav-a.fav,                                  // coups de cœur en tête
+  artist:(a,b)=>cmpTxt(a.artist,b.artist)||cmpTxt(a.title,b.title),
+  title:(a,b)=>cmpTxt(a.title,b.title),
+  'price-asc':(a,b)=>a.minPrice-b.minPrice,
+  'price-desc':(a,b)=>(b.minPrice===Infinity?-1:b.minPrice)-(a.minPrice===Infinity?-1:a.minPrice),
+  'year-desc':(a,b)=>(yr(b)||-1)-(yr(a)||-1),
+  'year-asc':(a,b)=>(yr(a)||9999)-(yr(b)||9999),
+};
+function setSort(v){
+  S.sort=v;
+  ['sort-list','sort-grid'].forEach(id=>document.getElementById(id).value=v);
+  applyFilters();
+  document.getElementById(S.view==='list'?'list':'grid-area').scrollTo({top:0});
+}
+['sort-list','sort-grid'].forEach(id=>document.getElementById(id).addEventListener('change',e=>setSort(e.target.value)));
+
 function applyFilters(){
   const q=S.q.toLowerCase();
   S.filtered=ALL.filter(r=>{
     const mq=!q||r.title.toLowerCase().includes(q)||r.artist.toLowerCase().includes(q)||r.label.toLowerCase().includes(q)||r.catno.toLowerCase().includes(q)||r.tags.some(t=>t.toLowerCase().includes(q));
     return mq&&GF[S.filter](r)&&matchNav(r);
   });
-  // coups de cœur en tête (tri stable : l'ordre du Sheets est conservé)
-  S.filtered.sort((a,b)=>b.fav-a.fav);
+  S.filtered.sort(SORTS[S.sort]||SORTS.sel);
   const n=S.filtered.length;
   document.getElementById('count-list').textContent=n+' disque'+(n!==1?'s':'');
   document.getElementById('count-grid').textContent=n+' disque'+(n!==1?'s':'');
@@ -986,7 +1014,8 @@ function resetKiosk(){
   document.getElementById('empty').style.display='';
   ['search','grid-search'].forEach(id=>document.getElementById(id).value='');
   ['search-clear','grid-search-clear'].forEach(id=>document.getElementById(id).style.display='none');
-  S.q='';S.filter='all';
+  S.q='';S.filter='all';S.sort='sel';
+  ['sort-list','sort-grid'].forEach(id=>document.getElementById(id).value='sel');
   document.querySelectorAll('.ftab,.gftab').forEach(b=>b.classList.toggle('on',b.dataset.f==='all'));
   if(S.nav)clearNav();
   setView(INITIAL_VIEW);
@@ -994,7 +1023,7 @@ function resetKiosk(){
 }
 setInterval(()=>{
   const idle=Date.now()-_lastTouch;
-  const pristine=!S.cur&&!S.q&&!S.nav&&S.filter==='all'&&S.view===INITIAL_VIEW;
+  const pristine=!S.cur&&!S.q&&!S.nav&&S.filter==='all'&&S.sort==='sel'&&S.view===INITIAL_VIEW;
   if(pristine)return;
   if(idle>(aud.paused?IDLE_MS:IDLE_PLAYING_MS)){resetKiosk();_lastTouch=Date.now();}
 },10000);
@@ -1024,6 +1053,16 @@ async function runAudioCheck(){
     ${bad.length?`<h3>Fichiers manquants</h3><table>${bad.map(r=>row(r,`fichiers ${missing[r.id].map(k=>r.discogs_id+'_'+k+'.mp3').join(', ')}`)).join('')}</table><br>`:''}
     ${noAudio.length?`<h3>Sans audio (colonne item_asset_link vide)</h3><table>${noAudio.map(r=>row(r,'—')).join('')}</table>`:''}`;
 }
+
+// ── REFRESH CACHÉ ─────────────────────────────────────────────────────
+// Appui long (1,5 s) sur le logo DandyRecords → recharge le catalogue depuis le Sheets.
+(()=>{const logo=document.getElementById('logo');let t=null;
+  const stop=()=>{clearTimeout(t);t=null;logo.classList.remove('pressing');};
+  logo.addEventListener('pointerdown',()=>{stop();logo.classList.add('pressing');
+    t=setTimeout(()=>{stop();toast('Mise à jour du catalogue…',2000);loadData(true);},1500);});
+  ['pointerup','pointerleave','pointercancel'].forEach(ev=>logo.addEventListener(ev,stop));
+  logo.addEventListener('contextmenu',e=>e.preventDefault());
+})();
 
 // ── INIT ──────────────────────────────────────────────────────────────
 loadData(false);
