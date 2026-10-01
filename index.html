@@ -174,6 +174,15 @@ body.mode-grid main{display:none}
 .gb-sh{background:rgba(254,243,199,.9);color:#92400E}
 .gb-pre{background:rgba(237,233,255,.9);color:#5B21B6}
 .gb-new{background:rgba(209,250,229,.9);color:#065F46}
+.gc-fav{position:absolute;bottom:auto;top:6px;left:22px;font-size:.85rem;line-height:1;color:var(--violet);text-shadow:0 1px 4px rgba(255,255,255,.8)}
+.ti-fav{color:var(--violet);margin-right:4px}
+.toast{position:fixed;left:50%;top:14px;transform:translate(-50%,-30px);background:var(--text);color:#fff;font-size:.7rem;font-weight:500;letter-spacing:.03em;padding:8px 14px;border-radius:20px;opacity:0;pointer-events:none;transition:all .3s;z-index:200;max-width:90vw;text-align:center}
+.toast.show{opacity:.92;transform:translate(-50%,0)}
+.chk{position:fixed;inset:0;background:var(--bg);z-index:300;overflow:auto;padding:24px;font-size:.8rem;color:var(--text)}
+.chk h2{font-size:1.1rem;margin-bottom:6px}.chk .chk-sub{color:var(--tdim);margin-bottom:16px}
+.chk table{border-collapse:collapse;width:100%}.chk td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+.chk .ok{color:#065F46}.chk .ko{color:#B91C1C}
+.chk button{margin-bottom:14px;padding:6px 12px;border-radius:6px;border:1.5px solid var(--border2);background:var(--surface);cursor:pointer}
 .gb-mix{background:rgba(255,247,237,.9);color:#9A3412}
 .gc-audio{position:absolute;top:9px;left:9px;width:8px;height:8px;border-radius:50%;background:var(--vlav);box-shadow:0 0 8px rgba(179,157,255,.8)}
 
@@ -371,6 +380,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
   </div>
   <div class="ftabs">
     <button class="ftab on" data-f="all">Tout</button>
+    <button class="ftab" data-f="fav">♥ Coups de cœur</button>
     <button class="ftab" data-f="new">Neuf</button>
     <button class="ftab" data-f="sh">Occasion</button>
     <button class="ftab" data-f="pre">Préco</button>
@@ -400,6 +410,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
 <div id="grid-area">
   <div class="grid-filterbar" id="grid-filterbar">
     <button class="gftab on" data-f="all">Tout</button>
+    <button class="gftab" data-f="fav">♥ Coups de cœur</button>
     <button class="gftab" data-f="new">Neuf</button>
     <button class="gftab" data-f="sh">Occasion</button>
     <button class="gftab" data-f="pre">Préco</button>
@@ -440,11 +451,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
 </div>
 
 <audio id="aud"></audio>
+<div class="toast" id="toast"></div>
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────────────
 const SHEET_ID='1adNI1aCJb2-Ym2kYYHg0tol56sGIa78-gImVY7dkKqU';
 const CSV_URL=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&t=`;
+const CACHE_KEY='dandy_catalog_csv';
+const IDLE_MS=3*60*1000;          // sans contact et sans musique → retour à l'accueil
+const IDLE_PLAYING_MS=15*60*1000; // musique en cours mais personne ne touche → idem
 
 // ── STATE ──────────────────────────────────────────────────────────────
 let ALL=[];
@@ -536,6 +551,7 @@ function buildGroups(rows){
       country:rep.release_country,cover:rep.item_image_link,formats:rep.release_formats,
       description:(rep.item_long_description||rep.item_short_description||'').trim(),
       tracks,audioBase,url:rep.item_eshop_link,
+      fav:listings.some(l=>/^(true|x|oui|yes|1|♥)$/i.test((l.coup_de_coeur||'').trim())),
       newEntry,preEntry,shEntries,hasNew,hasPre,hasSh,displayPrice,
       secondHand:hasSh&&!hasNew&&!hasPre,preorder:hasPre&&!hasNew&&!hasSh,isNew:hasNew&&!hasSh,
     };
@@ -543,21 +559,39 @@ function buildGroups(rows){
 }
 
 // ── LOAD DATA ──────────────────────────────────────────────────────────
+// Le dernier catalogue chargé est gardé sur l'appareil : si le réseau tombe,
+// l'app s'ouvre quand même avec cette version, puis se met à jour en arrière-plan.
+function readCache(){try{return localStorage.getItem(CACHE_KEY);}catch(e){return null;}}
+function writeCache(t){try{localStorage.setItem(CACHE_KEY,t);localStorage.setItem(CACHE_KEY+'_at',Date.now());}catch(e){}}
+function cacheAge(){try{const t=+localStorage.getItem(CACHE_KEY+'_at');return t?new Date(t).toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';}catch(e){return'';}}
+let _toastT;
+function toast(msg,ms=3500){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(_toastT);_toastT=setTimeout(()=>t.classList.remove('show'),ms);}
+function showCatalog(text){
+  ALL=buildGroups(parseCSV(text));
+  if(S.cur)S.cur=ALL.find(x=>x.id===S.cur.id)||S.cur;
+  applyFilters();
+}
 async function loadData(isRefresh=false){
   const loadEl=document.getElementById('loading'),msgEl=document.getElementById('loading-msg'),btnRef=document.getElementById('btn-refresh');
-  if(isRefresh){btnRef.classList.add('spinning');}
-  else{loadEl.querySelectorAll('.load-err,.btn-retry').forEach(e=>e.remove());msgEl.textContent='Chargement du catalogue…';loadEl.classList.remove('hidden');}
+  const cached=readCache();
+  let shown=isRefresh&&ALL.length>0;
+  if(!shown&&cached){showCatalog(cached);loadEl.classList.add('hidden');shown=true;}
+  if(isRefresh)btnRef.classList.add('spinning');
+  else if(!shown){loadEl.querySelectorAll('.load-err,.btn-retry').forEach(e=>e.remove());msgEl.textContent='Chargement du catalogue…';loadEl.classList.remove('hidden');}
   try{
     const res=await fetch(CSV_URL+Date.now());
     if(!res.ok)throw new Error(`Erreur HTTP ${res.status}`);
-    ALL=buildGroups(parseCSV(await res.text()));
-    applyFilters();loadEl.classList.add('hidden');
+    const text=await res.text();
+    if(!parseCSV(text).length)throw new Error('Catalogue vide');
+    writeCache(text);showCatalog(text);loadEl.classList.add('hidden');
+    if(isRefresh)toast('Catalogue à jour ✓');
   }catch(err){
-    if(isRefresh){console.error(err);}
+    console.error(err);
+    if(shown){toast(`Hors ligne — catalogue du ${cacheAge()||'dernier chargement'}`);}
     else{
       msgEl.textContent='';
       const d=document.createElement('div');d.className='load-err';
-      d.innerHTML=`Impossible de charger le catalogue.<br><small style="opacity:.7">${err.message}</small><br><br>Vérifie que le Google Sheets est partagé en accès public.`;
+      d.innerHTML=`Impossible de charger le catalogue.<br><small style="opacity:.7">${err.message}</small><br><br>Vérifie la connexion internet et que le Google Sheets est partagé en accès public.`;
       const b=document.createElement('button');b.className='btn-retry';b.textContent='↻ Réessayer';b.onclick=()=>loadData(false);
       loadEl.appendChild(d);loadEl.appendChild(b);
     }
@@ -613,7 +647,7 @@ function updateGridNavPill(){
 
 // ── FILTERS ────────────────────────────────────────────────────────────
 const GF={
-  all:()=>true,new:r=>r.isNew||r.hasNew,sh:r=>r.hasSh,pre:r=>r.hasPre||r.preorder,
+  all:()=>true,fav:r=>r.fav,new:r=>r.isNew||r.hasNew,sh:r=>r.hasSh,pre:r=>r.hasPre||r.preorder,
   jazz:r=>r.genres.includes('Jazz')||r.styles.some(s=>/jazz/i.test(s)),
   citypop:r=>r.styles.includes('City Pop')||r.styles.includes('Kayōkyoku'),
   fusion:r=>r.styles.includes('Fusion'),
@@ -631,6 +665,8 @@ function applyFilters(){
     const mq=!q||r.title.toLowerCase().includes(q)||r.artist.toLowerCase().includes(q)||r.label.toLowerCase().includes(q)||r.catno.toLowerCase().includes(q)||r.tags.some(t=>t.toLowerCase().includes(q));
     return mq&&GF[S.filter](r)&&matchNav(r);
   });
+  // coups de cœur en tête (tri stable : l'ordre du Sheets est conservé)
+  S.filtered.sort((a,b)=>b.fav-a.fav);
   const n=S.filtered.length;
   document.getElementById('count-list').textContent=n+' disque'+(n!==1?'s':'');
   document.getElementById('count-grid').textContent=n+' disque'+(n!==1?'s':'');
@@ -682,7 +718,7 @@ function renderList(){
     return`<div class="tile${act}" data-id="${r.id}" onclick="selectRecord('${r.id}')">
       <img class="tile-img" src="${r.cover}" alt="" loading="lazy" onerror="this.style.opacity=0">
       <div class="ti">
-        <div class="ti-art">${r.artist}</div>
+        <div class="ti-art">${r.fav?'<span class="ti-fav">♥</span>':''}${r.artist}</div>
         <div class="ti-tit">${r.title}</div>
         <div class="ti-meta">${meta}</div>
       </div>
@@ -703,6 +739,7 @@ function renderGrid(){
       <img src="${r.cover}" alt="${r.title}" loading="lazy" onerror="this.style.background='#2a2824'">
       <div class="gc-grad"></div>
       ${audioDot}
+      ${r.fav?'<span class="gc-fav">♥</span>':''}
       <span class="gc-badge ${bc}">${bt}</span>
       <div class="gc-info">
         <div class="gc-artist">${r.artist}</div>
@@ -871,8 +908,62 @@ function clearSearch(inputId){
 document.getElementById('search').addEventListener('input',e=>doSearch(e.target.value,'search'));
 document.getElementById('grid-search').addEventListener('input',e=>doSearch(e.target.value,'grid-search'));
 
+// ── IDLE RESET ────────────────────────────────────────────────────────
+// Personne ne touche l'écran pendant un moment → on coupe le son et on revient à l'accueil.
+const INITIAL_VIEW=document.body.className.replace('mode-','')||'list';
+let _lastTouch=Date.now();
+['pointerdown','touchstart','keydown','wheel','scroll'].forEach(ev=>document.addEventListener(ev,()=>{_lastTouch=Date.now();},{capture:true,passive:true}));
+function resetKiosk(){
+  aud.pause();aud.removeAttribute('src');aud.load();
+  S.cur=null;S.tIdx=null;
+  document.getElementById('pbar').classList.remove('on');
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.getElementById('det').style.display='none';
+  document.getElementById('empty').style.display='';
+  ['search','grid-search'].forEach(id=>document.getElementById(id).value='');
+  ['search-clear','grid-search-clear'].forEach(id=>document.getElementById(id).style.display='none');
+  S.q='';S.filter='all';
+  document.querySelectorAll('.ftab,.gftab').forEach(b=>b.classList.toggle('on',b.dataset.f==='all'));
+  if(S.nav)clearNav();
+  setView(INITIAL_VIEW);
+  ['list','grid-area','main'].forEach(id=>document.getElementById(id)?.scrollTo({top:0}));
+}
+setInterval(()=>{
+  const idle=Date.now()-_lastTouch;
+  const pristine=!S.cur&&!S.q&&!S.nav&&S.filter==='all'&&S.view===INITIAL_VIEW;
+  if(pristine)return;
+  if(idle>(aud.paused?IDLE_MS:IDLE_PLAYING_MS)){resetKiosk();_lastTouch=Date.now();}
+},10000);
+
+// ── VÉRIF AUDIO (ouvrir l'URL avec ?check) ─────────────────────────────
+// Teste chaque morceau de chaque disque et liste ceux qui ne se chargent pas.
+async function runAudioCheck(){
+  const box=document.createElement('div');box.className='chk';document.body.appendChild(box);
+  box.innerHTML='<h2>Vérification des fichiers audio</h2><div class="chk-sub" id="chk-sub">Chargement du catalogue…</div><div id="chk-out"></div>';
+  while(!ALL.length)await new Promise(r=>setTimeout(r,300));
+  const sub=box.querySelector('#chk-sub'),out=box.querySelector('#chk-out');
+  const noAudio=ALL.filter(r=>!r.audioBase);
+  const jobs=[];ALL.filter(r=>r.audioBase).forEach(r=>r.tracks.forEach((t,i)=>jobs.push({r,i,t})));
+  const probe=url=>new Promise(res=>{const a=new Audio();a.preload='metadata';let done=false;
+    const fin=ok=>{if(done)return;done=true;a.removeAttribute('src');a.load();res(ok);};
+    a.onloadedmetadata=()=>fin(true);a.onerror=()=>fin(false);setTimeout(()=>fin(false),15000);a.src=url;});
+  const missing={};let n=0;
+  const worker=async()=>{while(jobs.length){const j=jobs.shift();const ok=await probe(audioUrl(j.r,j.i));
+    if(!ok)(missing[j.r.id]=missing[j.r.id]||[]).push(j.i+1);
+    sub.textContent=`${++n} morceaux testés…`;}};
+  const total=jobs.length;
+  await Promise.all(Array.from({length:6},worker));
+  const bad=ALL.filter(r=>missing[r.id]);
+  const row=(r,txt)=>`<tr><td><b>${r.artist}</b> — ${r.title}</td><td>${r.discogs_id||'<span class="ko">pas de discogs_id</span>'}</td><td class="ko">${txt}</td></tr>`;
+  sub.innerHTML=`${total} morceaux testés · <span class="${bad.length?'ko':'ok'}">${bad.length} disque(s) avec fichiers manquants</span> · ${noAudio.length} disque(s) sans item_asset_link`;
+  out.innerHTML=`<button onclick="location.href=location.pathname">← Retour au kiosk</button>
+    ${bad.length?`<h3>Fichiers manquants</h3><table>${bad.map(r=>row(r,`fichiers ${missing[r.id].map(k=>r.discogs_id+'_'+k+'.mp3').join(', ')}`)).join('')}</table><br>`:''}
+    ${noAudio.length?`<h3>Sans audio (colonne item_asset_link vide)</h3><table>${noAudio.map(r=>row(r,'—')).join('')}</table>`:''}`;
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────
 loadData(false);
+if(new URLSearchParams(location.search).has('check'))runAudioCheck();
 </script>
 </body>
 </html>
