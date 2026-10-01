@@ -736,7 +736,7 @@ function buildDetailHTML(r){
   stockHtml+='</div>';
   const tlHtml=r.tracks.length?(()=>{
     const hb=!!r.audioBase;
-    return`<div class="tl-hdr">Tracklist — ${r.tracks.length} titres${hb?' · extraits disponibles':''}</div><div class="tracklist" id="tl-${r.id}">${r.tracks.map((t,i)=>{
+    return`<div class="tl-hdr">Tracklist — ${r.tracks.length} titres${hb?' · écoute disponible':''}</div><div class="tracklist" id="tl-${r.id}">${r.tracks.map((t,i)=>{
       const cls=hb?'track has-audio':'track';
       const evt=hb?`onclick="playTrack('${r.id}',${i})"`:'' ;
       const btn=hb?`<button class="t-btn" onclick="event.stopPropagation();playTrack('${r.id}',${i})"><svg class="ico-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><svg class="ico-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>`:`<div style="width:24px;height:24px;flex-shrink:0"></div>`;
