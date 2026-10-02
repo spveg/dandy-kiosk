@@ -58,7 +58,8 @@ Si un album n'est pas reconnu, ou si plusieurs disques correspondent, **ajoute l
 
 ---
 
-## Dernière étape côté kiosk
+## Et dans le kiosk ?
 
-- Dans le Google Sheets, la colonne **`item_asset_link`** des disques qui ont du son doit contenir l'URL publique du bucket : `https://pub-….r2.dev/`.
-- Ouvre le kiosk avec **`?check`** à la fin de l'adresse pour vérifier que tous les morceaux se chargent.
+Rien à faire. À chaque passage, le script envoie aussi sur R2 un petit fichier `audio-index.js` : la liste des disques qui ont du son. Le kiosk le lit au démarrage, ou à l'appui long sur le logo, et affiche les boutons ▶ sur ces disques. **Plus besoin de remplir la colonne `item_asset_link`** dans le Google Sheets. Si elle est remplie, elle reste prise en compte.
+
+Pour vérifier que tous les morceaux se chargent, ouvre le kiosk avec **`?check`** à la fin de l'adresse.
