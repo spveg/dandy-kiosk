@@ -607,6 +607,26 @@ function showCatalog(text){
   ALL=buildGroups(parseCSV(text));
   if(S.cur)S.cur=ALL.find(x=>x.id===S.cur.id)||S.cur;
   applyFilters();
+  precacheCovers();
+}
+
+// ── POCHETTES EN CACHE ────────────────────────────────────────────────
+// sw.js garde les pochettes sur l'appareil. On lui donne la liste du catalogue :
+// il télécharge en arrière-plan celles qui manquent et oublie celles des disques partis.
+const COVERS_STAT={done:0,total:0};
+if('serviceWorker'in navigator&&isSecureContext){
+  navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW',e));
+  navigator.serviceWorker.addEventListener('message',e=>{if(e.data?.type==='covers-cached')Object.assign(COVERS_STAT,e.data);});
+}
+let _pcT;
+function precacheCovers(){
+  if(!('serviceWorker'in navigator)||!isSecureContext)return;
+  clearTimeout(_pcT);
+  _pcT=setTimeout(async()=>{
+    const reg=await navigator.serviceWorker.ready;
+    const urls=[...new Set(ALL.map(r=>r.cover).filter(Boolean))];
+    reg.active?.postMessage({type:'precache-covers',urls});
+  },3000); // laisse d'abord s'afficher les pochettes visibles
 }
 async function loadData(isRefresh=false){
   const loadEl=document.getElementById('loading'),msgEl=document.getElementById('loading-msg'),btnRef=document.getElementById('btn-refresh');
@@ -773,7 +793,7 @@ function renderList(){
     const meta=[r.label,r.catno,r.year].filter(Boolean).join(' · ');
     const pl=S.play?.r.id===r.id?' is-playing':'';
     return`<div class="tile${act}${pl}" data-id="${r.id}" onclick="selectRecord('${r.id}')">
-      <img class="tile-img" src="${r.cover}" alt="" loading="lazy" onerror="this.style.opacity=0">
+      <img class="tile-img" src="${r.cover}" alt="" loading="lazy" decoding="async" onerror="this.style.opacity=0">
       <div class="ti">
         <div class="ti-art">${r.fav?'<span class="ti-fav">♥</span>':''}${r.artist}</div>
         <div class="ti-tit">${r.title}</div>
@@ -793,7 +813,7 @@ function renderGrid(){
     const act=S.cur?.id===r.id?' on':'';
     const pl=S.play?.r.id===r.id?' is-playing':'';
     return`<div class="gc${act}${pl}" data-id="${r.id}" onclick="openModal('${r.id}')">
-      <img src="${r.cover}" alt="${r.title}" loading="lazy" onerror="this.style.background='#2a2824'">
+      <img src="${r.cover}" alt="${r.title}" loading="lazy" decoding="async" onerror="this.style.background='#2a2824'">
       <div class="gc-grad"></div>
       <div class="gc-eq"><i></i><i></i><i></i></div>
       ${r.fav?'<span class="gc-fav">♥</span>':''}
@@ -1048,7 +1068,9 @@ async function runAudioCheck(){
   await Promise.all(Array.from({length:6},worker));
   const bad=ALL.filter(r=>missing[r.id]);
   const row=(r,txt)=>`<tr><td><b>${r.artist}</b> — ${r.title}</td><td>${r.discogs_id||'<span class="ko">pas de discogs_id</span>'}</td><td class="ko">${txt}</td></tr>`;
-  sub.innerHTML=`${total} morceaux testés · <span class="${bad.length?'ko':'ok'}">${bad.length} disque(s) avec fichiers manquants</span> · ${noAudio.length} disque(s) sans item_asset_link`;
+  let cov='';
+  try{const c=await caches.open('dandy-covers');const n=(await c.keys()).length;const t=new Set(ALL.map(r=>r.cover).filter(Boolean)).size;cov=` · pochettes enregistrées sur l'appareil : <span class="${n>=t?'ok':'ko'}">${n} / ${t}</span>`;}catch(e){}
+  sub.innerHTML=`${total} morceaux testés · <span class="${bad.length?'ko':'ok'}">${bad.length} disque(s) avec fichiers manquants</span> · ${noAudio.length} disque(s) sans item_asset_link${cov}`;
   out.innerHTML=`<button onclick="location.href=location.pathname">← Retour au kiosk</button>
     ${bad.length?`<h3>Fichiers manquants</h3><table>${bad.map(r=>row(r,`fichiers ${missing[r.id].map(k=>r.discogs_id+'_'+k+'.mp3').join(', ')}`)).join('')}</table><br>`:''}
     ${noAudio.length?`<h3>Sans audio (colonne item_asset_link vide)</h3><table>${noAudio.map(r=>row(r,'—')).join('')}</table>`:''}`;
