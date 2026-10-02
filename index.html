@@ -495,6 +495,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 const SHEET_ID='1adNI1aCJb2-Ym2kYYHg0tol56sGIa78-gImVY7dkKqU';
 const CSV_URL=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&t=`;
 const CACHE_KEY='dandy_catalog_csv';
+// Bucket R2 des MP3. Le script tools/dandy-audio.ps1 y dépose audio-index.js : la liste des
+// disques qui ont du son. Plus besoin de remplir item_asset_link à la main dans le Sheets
+// (si la colonne est remplie, elle reste prioritaire).
+const AUDIO_BASE='https://pub-f14efcab169e4fa4bf7784d6d3d5f958.r2.dev/';
+const AUDIO_IDS_KEY='dandy_audio_ids';
 const IDLE_MS=3*60*1000;          // sans contact et sans musique → retour à l'accueil
 const IDLE_PLAYING_MS=15*60*1000; // musique en cours mais personne ne touche → idem
 
@@ -550,6 +555,7 @@ function buildGroups(rows){
     const tags=[...new Set([...genres,...styles])];
     const label=(rep.release_labels_formatted||'').split(';')[0].replace(/\s*\(.*?\)\s*/g,'').trim();
     let audioBase=(rep.item_asset_link||'').trim();
+    if(!audioBase&&AUDIO_IDS.has((rep.release_discogs_id||'').trim()))audioBase=AUDIO_BASE;
     if(audioBase&&!audioBase.endsWith('/'))audioBase+='/';
 
     const newL=listings.filter(l=>l.listing_second_hand!=='TRUE'&&l.listing_pre_order!=='TRUE');
@@ -582,10 +588,10 @@ function buildGroups(rows){
     const hasNew=!!newEntry,hasPre=!!preEntry,hasSh=shEntries.length>0;
 
     return{
-      id:rep.item_id,discogs_id:rep.release_discogs_id,title:rep.item_title,
+      id:rep.item_id,discogs_id:(rep.release_discogs_id||'').trim(),title:rep.item_title||'',
       artist:(rep.release_artists_formatted||'').trim(),label,tags,genres,styles,
-      catno:(rep.release_catnos||'').split(';')[0].trim(),year:rep.release_year,
-      country:rep.release_country,cover:rep.item_image_link,formats:rep.release_formats,
+      catno:(rep.release_catnos||'').split(';')[0].trim(),year:rep.release_year||'',
+      country:rep.release_country||'',cover:rep.item_image_link||'',formats:rep.release_formats||'',
       description:(rep.item_long_description||rep.item_short_description||'').trim(),
       tracks,audioBase,url:rep.item_eshop_link,
       fav:listings.some(l=>/^(true|x|oui|yes|1|♥)$/i.test((l.coup_de_coeur||'').trim())),
@@ -603,7 +609,31 @@ function writeCache(t){try{localStorage.setItem(CACHE_KEY,t);localStorage.setIte
 function cacheAge(){try{const t=+localStorage.getItem(CACHE_KEY+'_at');return t?new Date(t).toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';}catch(e){return'';}}
 let _toastT;
 function toast(msg,ms=3500){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(_toastT);_toastT=setTimeout(()=>t.classList.remove('show'),ms);}
+// ── LISTE DES DISQUES AVEC AUDIO (audio-index.js sur R2) ───────────────
+// Chargée par une balise <script> (pas besoin de réglage CORS sur le bucket) et gardée
+// sur l'appareil pour marcher hors ligne.
+let AUDIO_IDS=new Set();
+try{AUDIO_IDS=new Set(JSON.parse(localStorage.getItem(AUDIO_IDS_KEY)||'[]'));}catch(e){}
+let LAST_CSV='';
+function loadAudioIndex(){
+  return new Promise(res=>{
+    const sc=document.createElement('script');let done=false;
+    const fin=()=>{if(done)return;done=true;sc.remove();
+      const d=window.DANDY_AUDIO;delete window.DANDY_AUDIO;
+      if(d&&Array.isArray(d.ids)){
+        const next=new Set(d.ids.map(String));
+        const changed=next.size!==AUDIO_IDS.size||[...next].some(x=>!AUDIO_IDS.has(x));
+        AUDIO_IDS=next;try{localStorage.setItem(AUDIO_IDS_KEY,JSON.stringify([...next]));}catch(e){}
+        if(changed&&LAST_CSV)showCatalog(LAST_CSV);
+      }
+      res();};
+    sc.onload=fin;sc.onerror=fin;setTimeout(fin,8000);
+    sc.src=AUDIO_BASE+'audio-index.js?t='+Date.now();
+    document.head.appendChild(sc);
+  });
+}
 function showCatalog(text){
+  LAST_CSV=text;
   ALL=buildGroups(parseCSV(text));
   if(S.cur)S.cur=ALL.find(x=>x.id===S.cur.id)||S.cur;
   applyFilters();
@@ -1085,10 +1115,10 @@ async function runAudioCheck(){
   const row=(r,txt)=>`<tr><td><b>${r.artist}</b> — ${r.title}</td><td>${r.discogs_id||'<span class="ko">pas de discogs_id</span>'}</td><td class="ko">${txt}</td></tr>`;
   let cov='';
   try{const c=await caches.open('dandy-covers');const n=(await c.keys()).length;const t=new Set(ALL.map(r=>r.cover).filter(Boolean)).size;cov=` · pochettes enregistrées sur l'appareil : <span class="${n>=t?'ok':'ko'}">${n} / ${t}</span>`;}catch(e){}
-  sub.innerHTML=`${total} morceaux testés · <span class="${bad.length?'ko':'ok'}">${bad.length} disque(s) avec fichiers manquants</span> · ${noAudio.length} disque(s) sans item_asset_link${cov}`;
+  sub.innerHTML=`${total} morceaux testés · <span class="${bad.length?'ko':'ok'}">${bad.length} disque(s) avec fichiers manquants</span> · ${noAudio.length} disque(s) sans audio${cov}`;
   out.innerHTML=`<button onclick="location.href=location.pathname">← Retour au kiosk</button>
     ${bad.length?`<h3>Fichiers manquants</h3><table>${bad.map(r=>row(r,`fichiers ${missing[r.id].map(k=>r.discogs_id+'_'+k+'.mp3').join(', ')}`)).join('')}</table><br>`:''}
-    ${noAudio.length?`<h3>Sans audio (colonne item_asset_link vide)</h3><table>${noAudio.map(r=>row(r,'—')).join('')}</table>`:''}`;
+    ${noAudio.length?`<h3>Sans audio (pas encore passés par Convertir-et-envoyer.bat)</h3><table>${noAudio.map(r=>row(r,'—')).join('')}</table>`:''}`;
 }
 
 // ── REFRESH CACHÉ ─────────────────────────────────────────────────────
@@ -1096,13 +1126,14 @@ async function runAudioCheck(){
 (()=>{const logo=document.getElementById('logo');let t=null;
   const stop=()=>{clearTimeout(t);t=null;logo.classList.remove('pressing');};
   logo.addEventListener('pointerdown',()=>{stop();logo.classList.add('pressing');
-    t=setTimeout(()=>{stop();toast('Mise à jour du catalogue…',2000);loadData(true);},1500);});
+    t=setTimeout(()=>{stop();toast('Mise à jour du catalogue…',2000);loadAudioIndex();loadData(true);},1500);});
   ['pointerup','pointerleave','pointercancel'].forEach(ev=>logo.addEventListener(ev,stop));
   logo.addEventListener('contextmenu',e=>e.preventDefault());
 })();
 
 // ── INIT ──────────────────────────────────────────────────────────────
 loadData(false);
+loadAudioIndex();
 if(new URLSearchParams(location.search).has('check'))runAudioCheck();
 </script>
 </body>

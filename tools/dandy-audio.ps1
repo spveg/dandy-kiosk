@@ -212,14 +212,24 @@ foreach ($albumDir in ($albums.Keys | Sort-Object)) {
   }
 }
 
-# ── 3. Envoi sur R2 ────────────────────────────────────────────────────
+# ── 3. Liste des disques avec audio, lue par le kiosk ──────────────────
+# audio-index.js est envoyé avec les MP3 : le kiosk sait ainsi quels disques ont du son,
+# sans rien remplir dans le Google Sheets.
+$idsAudio = @(Get-ChildItem -LiteralPath $Sortie -Filter '*_1.mp3' | ForEach-Object { $_.Name -replace '_1\.mp3$', '' } | Sort-Object)
+if (-not $Simulation) {
+  $json = '[' + (($idsAudio | ForEach-Object { '"' + $_ + '"' }) -join ',') + ']'
+  $js = "window.DANDY_AUDIO={""ids"":$json,""at"":""$((Get-Date).ToString('s'))""};"
+  [IO.File]::WriteAllText((Join-Path $Sortie 'audio-index.js'), $js, (New-Object Text.UTF8Encoding $false))
+}
+
+# ── 4. Envoi sur R2 ────────────────────────────────────────────────────
 if ($uploader) {
   Titre 'Envoi sur Cloudflare R2'
-  & rclone copy $Sortie $R2 --include '*.mp3' --transfers 6 --s3-no-check-bucket --stats-one-line --progress
+  & rclone copy $Sortie $R2 --include '*.mp3' --include 'audio-index.js' --transfers 6 --s3-no-check-bucket --stats-one-line --progress
   if ($LASTEXITCODE -eq 0) { Ok 'Envoi terminé' } else { Erreur "rclone a renvoyé une erreur (code $LASTEXITCODE)"; $aRevoir += 'Envoi R2 incomplet : relance le script' }
 }
 
-# ── 4. Bilan ───────────────────────────────────────────────────────────
+# ── 5. Bilan ───────────────────────────────────────────────────────────
 Titre 'Bilan'
 $mode = if ($Simulation) { ' (simulation : rien n''a été écrit)' } else { '' }
 Ok "$($stats.disques) disques du stock trouvés, $($stats.convertis) morceaux convertis, $($stats.ajour) déjà à jour$mode"
