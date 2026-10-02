@@ -614,9 +614,24 @@ function showCatalog(text){
 // sw.js garde les pochettes sur l'appareil. On lui donne la liste du catalogue :
 // il télécharge en arrière-plan celles qui manquent et oublie celles des disques partis.
 const COVERS_STAT={done:0,total:0};
+let _manualRefreshAt=0;
+// Nombre de pochettes enregistrées dans CETTE app (sur iPad, l'icône d'écran d'accueil
+// a sa propre mémoire, séparée de Safari : c'est donc ici qu'il faut vérifier).
+async function coversCount(){
+  try{const n=(await (await caches.open('dandy-covers')).keys()).length;return{n,t:new Set(ALL.map(r=>r.cover).filter(Boolean)).size};}catch(e){return null;}
+}
+async function coversToast(prefix=''){
+  const c=await coversCount();
+  toast(c?`${prefix}Pochettes sur l'iPad : ${Math.min(c.n,c.t)} / ${c.t}${c.n>=c.t?' ✓':' — téléchargement en cours…'}`:prefix.replace(/ · $/,''),5000);
+}
 if('serviceWorker'in navigator&&isSecureContext){
   navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW',e));
-  navigator.serviceWorker.addEventListener('message',e=>{if(e.data?.type==='covers-cached')Object.assign(COVERS_STAT,e.data);});
+  navigator.serviceWorker.addEventListener('message',e=>{
+    if(e.data?.type!=='covers-cached')return;
+    Object.assign(COVERS_STAT,e.data);
+    // après un Refresh manuel (appui long sur le logo), on dit où en sont les pochettes
+    if(Date.now()-_manualRefreshAt<5*60*1000)coversToast();
+  });
 }
 let _pcT;
 function precacheCovers(){
@@ -641,7 +656,7 @@ async function loadData(isRefresh=false){
     const text=await res.text();
     if(!parseCSV(text).length)throw new Error('Catalogue vide');
     writeCache(text);showCatalog(text);loadEl.classList.add('hidden');
-    if(isRefresh)toast('Catalogue à jour ✓');
+    if(isRefresh){_manualRefreshAt=Date.now();coversToast('Catalogue à jour ✓ · ');}
   }catch(err){
     console.error(err);
     if(shown){toast(`Hors ligne — catalogue du ${cacheAge()||'dernier chargement'}`);}
