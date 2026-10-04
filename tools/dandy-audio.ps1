@@ -30,6 +30,7 @@ try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch {}
 # ── CONFIG ─────────────────────────────────────────────────────────────
 $Bitrate = '256k'
 $SheetId = '1adNI1aCJb2-Ym2kYYHg0tol56sGIa78-gImVY7dkKqU'
+$PublicUrl = 'https://pub-f14efcab169e4fa4bf7784d6d3d5f958.r2.dev'   # adresse publique du bucket (lecture de audio-index.js)
 $Extensions = @('.flac','.wav','.aif','.aiff','.m4a','.alac','.mp3','.ogg','.opus','.wma','.ape','.wv')
 $ConfigPath = Join-Path $PSScriptRoot 'dandy-config.json'
 # ───────────────────────────────────────────────────────────────────────
@@ -45,6 +46,7 @@ $cfg = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Js
 $Source = $cfg.source; $Sortie = $cfg.sortie; $R2 = "r2:$($cfg.bucket)"
 if ($env:DANDY_SOURCE) { $Source = $env:DANDY_SOURCE }
 if ($env:DANDY_SORTIE) { $Sortie = $env:DANDY_SORTIE }
+if ($env:DANDY_PUBLIC_URL) { $PublicUrl = $env:DANDY_PUBLIC_URL }
 
 # minuscules, sans accents ni ponctuation : "Ëmi – Timely!" → "emi timely"
 function Normaliser([string]$s) {
@@ -215,7 +217,22 @@ foreach ($albumDir in ($albums.Keys | Sort-Object)) {
 # ── 3. Liste des disques avec audio, lue par le kiosk ──────────────────
 # audio-index.js est envoyé avec les MP3 : le kiosk sait ainsi quels disques ont du son,
 # sans rien remplir dans le Google Sheets.
-$idsAudio = @(Get-ChildItem -LiteralPath $Sortie -Filter '*_1.mp3' | ForEach-Object { $_.Name -replace '_1\.mp3$', '' } | Sort-Object)
+$idsAudio = @(Get-ChildItem -LiteralPath $Sortie -Filter '*_1.mp3' | ForEach-Object { $_.Name -replace '_1\.mp3$', '' })
+# On garde aussi les disques déjà listés en ligne (ajoutés depuis le Mac, par exemple).
+# Si la liste en ligne est illisible (réseau), on ne l'envoie pas, pour ne rien effacer.
+$indexOk = $true
+if ($uploader) {
+  try {
+    $wc2 = New-Object Net.WebClient; $wc2.Encoding = [Text.Encoding]::UTF8
+    $enLigne = $wc2.DownloadString("$PublicUrl/audio-index.js?t=$([DateTime]::Now.Ticks)")
+    $idsAudio += @([regex]::Matches($enLigne, '"(\d+)"') | ForEach-Object { $_.Groups[1].Value })
+  } catch {
+    $code = $null; try { $code = [int]$_.Exception.InnerException.Response.StatusCode } catch {}
+    if (-not $code) { try { $code = [int]$_.Exception.Response.StatusCode } catch {} }
+    if ($code -ne 404) { $indexOk = $false; Alerte "Liste en ligne illisible ($($_.Exception.Message)) : elle ne sera pas modifiée cette fois." }
+  }
+}
+$idsAudio = @($idsAudio | Where-Object { $_ } | Sort-Object -Unique)
 if (-not $Simulation) {
   $json = '[' + (($idsAudio | ForEach-Object { '"' + $_ + '"' }) -join ',') + ']'
   $js = "window.DANDY_AUDIO={""ids"":$json,""at"":""$((Get-Date).ToString('s'))""};"
@@ -225,7 +242,8 @@ if (-not $Simulation) {
 # ── 4. Envoi sur R2 ────────────────────────────────────────────────────
 if ($uploader) {
   Titre 'Envoi sur Cloudflare R2'
-  & rclone copy $Sortie $R2 --include '*.mp3' --include 'audio-index.js' --transfers 6 --s3-no-check-bucket --stats-one-line --progress
+  $inclure = @('--include', '*.mp3'); if ($indexOk) { $inclure += @('--include', 'audio-index.js') }
+  & rclone copy $Sortie $R2 @inclure --transfers 6 --s3-no-check-bucket --stats-one-line --progress
   if ($LASTEXITCODE -eq 0) { Ok 'Envoi terminé' } else { Erreur "rclone a renvoyé une erreur (code $LASTEXITCODE)"; $aRevoir += 'Envoi R2 incomplet : relance le script' }
 }
 
