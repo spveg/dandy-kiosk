@@ -58,6 +58,23 @@ Si un album n'est pas reconnu, ou si plusieurs disques correspondent, **ajoute l
 
 ---
 
+## Depuis un Mac (en convention par exemple)
+
+`Ajouter-album-Mac.command` fait la même chose album par album : tu glisses le dossier d'un album dans la fenêtre, et il convertit, renomme et envoie le tout.
+
+1. **Première fois :** dans le Finder, **clic droit sur `Ajouter-album-Mac.command` → Ouvrir → Ouvrir**. macOS bloque le double-clic sur les scripts téléchargés.
+
+   Si le Finder refuse encore, ouvre le **Terminal**, tape `bash ` (avec l'espace), glisse le fichier dans la fenêtre et appuie sur Entrée.
+2. Si ffmpeg manque, le script propose de l'installer avec Homebrew. Si Homebrew manque aussi, il affiche la ligne à coller dans le Terminal.
+3. Pour chaque album : **glisse le dossier dans la fenêtre**, puis Entrée. Le script montre l'ordre des morceaux et demande de confirmer.
+   - Le Discogs ID est lu au début du nom du dossier (`22976843 2010 - ジブリジャズ2`).
+   - S'il n'y est pas, le script le demande.
+4. Quand tu as fini, appuie sur Entrée sans rien glisser.
+5. **Envoi sur R2 :** la première fois, le script propose de créer la connexion. Il faut un token R2, à créer comme sur le PC ; tu peux en créer un nouveau depuis le dashboard. Il ajoute ensuite les disques à `audio-index.js` sans retirer ceux déjà en ligne.
+6. Sur l'iPad : appui long sur le logo.
+
+Les disques ajoutés depuis le Mac restent dans la liste lors des passages suivants du `.bat` sur le PC, qui fusionne avec la liste en ligne au lieu de l'écraser.
+
 ## Et dans le kiosk ?
 
 Rien à faire. À chaque passage, le script envoie aussi sur R2 un petit fichier `audio-index.js` : la liste des disques qui ont du son. Le kiosk le lit au démarrage, ou à l'appui long sur le logo, et affiche les boutons ▶ sur ces disques. **Plus besoin de remplir la colonne `item_asset_link`** dans le Google Sheets. Si elle est remplie, elle reste prise en compte.
